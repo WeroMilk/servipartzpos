@@ -265,6 +265,34 @@ export default function StoresPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        {/* Acceso rápido: Reporte e Inventario de todas las tiendas */}
+        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto mb-4">
+          <Link
+            href="/report"
+            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
+              <BarChart3 className="w-5 h-5 text-primary-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-900 text-sm">Reporte de ventas</p>
+              <p className="text-xs text-slate-500 truncate">Todas las tiendas</p>
+            </div>
+          </Link>
+          <Link
+            href="/inventario"
+            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-primary-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-900 text-sm">Inventario general</p>
+              <p className="text-xs text-slate-500 truncate">Todas las tiendas</p>
+            </div>
+          </Link>
+        </div>
+
         {stores.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Store className="w-12 h-12 text-slate-300 mb-4" />

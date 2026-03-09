@@ -46,7 +46,17 @@ export default function LoginForm() {
       }
       router.push("/stores");
     } catch (err: any) {
-      setError(err.message || "Error al autenticar");
+      const code = err?.code ?? "";
+      const messages: Record<string, string> = {
+        "auth/invalid-credential": "Contraseña incorrecta",
+        "auth/invalid-email": "Correo electrónico no válido",
+        "auth/email-already-in-use": "Este correo ya está registrado",
+        "auth/weak-password": "La contraseña debe tener al menos 6 caracteres",
+        "auth/too-many-requests": "Demasiados intentos. Intenta más tarde",
+        "auth/network-request-failed": "Error de conexión. Revisa tu internet",
+        "auth/user-disabled": "Esta cuenta ha sido deshabilitada",
+      };
+      setError(messages[code] || err?.message || "Error al autenticar");
     } finally {
       setLoading(false);
     }
