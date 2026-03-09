@@ -44,29 +44,38 @@ export default function StoresPage() {
   }, []);
 
   const loadStores = async () => {
-    if (useFirebase) {
-      try {
-        const all = await getStores();
-        const user = demoAuth.getCurrentUser();
-        const storeIds = user?.storeIds ?? ["default"];
-        const filtered =
-          isAdmin ? all : all.filter((s) => storeIds.includes(s.id));
-        setStores(filtered);
-      } catch {
-        setStores([]);
-      }
-    } else {
+    const fallbackToDemo = () => {
       const user = demoAuth.getCurrentUser();
       const storeName = user?.storeName ?? "Tienda principal";
       setStores([
-        {
-          id: "default",
-          name: storeName,
-          createdAt: new Date(),
-        },
+        { id: "default", name: storeName, createdAt: new Date() },
       ]);
+    };
+
+    try {
+      if (useFirebase) {
+        const timeout = new Promise<"timeout">((r) => setTimeout(() => r("timeout"), 6000));
+        const result = await Promise.race([getStores(), timeout]);
+        if (result === "timeout") {
+          fallbackToDemo();
+        } else {
+          const user = demoAuth.getCurrentUser();
+          const storeIds = user?.storeIds ?? ["default"];
+          const filtered = isAdmin ? result : result.filter((s) => storeIds.includes(s.id));
+          setStores(filtered.length > 0 ? filtered : [{
+            id: "default",
+            name: demoAuth.getCurrentUser()?.storeName ?? "Tienda principal",
+            createdAt: new Date(),
+          }]);
+        }
+      } else {
+        fallbackToDemo();
+      }
+    } catch {
+      fallbackToDemo();
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAdd = async () => {
