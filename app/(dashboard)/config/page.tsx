@@ -260,8 +260,8 @@ export default function ConfigPage() {
             </section>
           </div>
 
-          {/* Backup / Exportación */}
-          <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
+          {/* Backup / Exportación - oculto en móvil */}
+          <section className="hidden md:flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
             <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
               <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
                 <Database className="w-4 h-4 text-apple-accent" aria-hidden />

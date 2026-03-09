@@ -52,3 +52,31 @@ export function getInventoryIds(): Set<string> {
   const bottles = loadInventory();
   return new Set(bottles.map((b) => b.id));
 }
+
+/**
+ * Devuelve stock al inventario (para devoluciones).
+ * @param productId - ID del producto
+ * @param quantity - Cantidad a devolver (en unidades o oz según categoría)
+ * @param useUnits - true si el producto se mide en unidades
+ * @returns true si se pudo devolver, false si el producto no existe
+ */
+export function addStockToProduct(
+  productId: string,
+  quantity: number,
+  useUnits: boolean
+): boolean {
+  const bottles = loadInventory();
+  const idx = bottles.findIndex((b) => b.id === productId);
+  if (idx === -1) return false;
+  const b = bottles[idx];
+  if (useUnits) {
+    const curr = b.currentUnits ?? 0;
+    bottles[idx] = { ...b, currentUnits: curr + quantity };
+  } else {
+    const currOz = b.currentOz ?? 0;
+    const addOz = quantity * 29.57; // oz por unidad
+    bottles[idx] = { ...b, currentOz: currOz + addOz };
+  }
+  saveInventory(bottles);
+  return true;
+}

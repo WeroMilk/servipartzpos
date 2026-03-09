@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { Check, X, Edit, Settings, ChevronLeft, ChevronRight, Package, Type, Calendar, FileSpreadsheet, ArrowLeftRight, ClipboardCheck, Lock } from "lucide-react";
 import { isBeerBottleId } from "@/lib/measurementRules";
 
-/** Items por página: en móvil sin scroll (reducir boxes para que todo quepa). */
+/** Items por página: en móvil sin scroll (reducir boxes para que todo quepa).
+ * Móvil: 8 si hay altura suficiente; 7 si el 8º quedaría cortado (~820px). */
 function getItemsPerPage(width: number, height: number = 800) {
   if (width >= 1024) return 7;
   if (width >= 768) return 7;
@@ -15,6 +16,8 @@ function getItemsPerPage(width: number, height: number = 800) {
   if (height < 620) return 5;
   if (height < 700) return 5;
   if (height < 780) return 7;
+  // Altura >= 820: caben 8 sin cortar; entre 780-820 el 8º se vería comido → 7
+  if (height >= 820) return 8;
   return 7;
 }
 

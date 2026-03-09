@@ -1,5 +1,5 @@
 import { SERVIPARTZ_INFO } from "./storeInfo";
-import type { SaleItem, PaymentMethod } from "./types";
+import type { SaleItem, PaymentMethod, PaymentSplit } from "./types";
 
 export interface TicketData {
   items: SaleItem[];
@@ -7,8 +7,11 @@ export interface TicketData {
   ticketNumber: number;
   employeeName?: string;
   paymentMethod: PaymentMethod;
+  payments?: PaymentSplit[];
   amountReceived?: number;
   change?: number;
+  subtotalBeforeDiscount?: number;
+  discountTotal?: number;
   date?: Date;
 }
 
@@ -50,17 +53,33 @@ export function buildTicketHtml(data: TicketData): string {
   }
 
   lines.push("----------------------------------------");
-  lines.push(`Subtotal:            $${data.total.toFixed(2)}`);
+  if (data.subtotalBeforeDiscount != null && data.discountTotal != null && data.discountTotal > 0) {
+    lines.push(`Subtotal:            $${data.subtotalBeforeDiscount.toFixed(2)}`);
+    lines.push(`Descuento:           -$${data.discountTotal.toFixed(2)}`);
+  }
   lines.push(`Total:               $${data.total.toFixed(2)}`);
   lines.push("----------------------------------------");
-  const paymentLabel =
-    data.paymentMethod === "tarjeta_debito"
-      ? "Tarjeta débito"
-      : data.paymentMethod === "tarjeta_credito"
-        ? "Tarjeta crédito"
-        : data.paymentMethod.charAt(0).toUpperCase() + data.paymentMethod.slice(1);
-  lines.push(`Pago: ${paymentLabel}`);
-  if (data.paymentMethod === "efectivo" && data.amountReceived != null) {
+  if (data.payments && data.payments.length > 0) {
+    lines.push("Pagos:");
+    for (const p of data.payments) {
+      const label =
+        p.method === "tarjeta_debito"
+          ? "Tarjeta débito"
+          : p.method === "tarjeta_credito"
+            ? "Tarjeta crédito"
+            : p.method.charAt(0).toUpperCase() + p.method.slice(1);
+      lines.push(`  ${label}: ${p.amount.toFixed(2)}`);
+    }
+  } else {
+    const paymentLabel =
+      data.paymentMethod === "tarjeta_debito"
+        ? "Tarjeta débito"
+        : data.paymentMethod === "tarjeta_credito"
+          ? "Tarjeta crédito"
+          : data.paymentMethod.charAt(0).toUpperCase() + data.paymentMethod.slice(1);
+    lines.push(`Pago: ${paymentLabel}`);
+  }
+  if (data.amountReceived != null && data.amountReceived > 0) {
     lines.push(`Recibido:            $${data.amountReceived.toFixed(2)}`);
     if (data.change != null) lines.push(`Cambio:              $${data.change.toFixed(2)}`);
   }

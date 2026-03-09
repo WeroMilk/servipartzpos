@@ -12,7 +12,8 @@ export type MovementType =
   | "sales_import"
   | "order_import"
   | "bottles_reorder"
-  | "sort_change";
+  | "sort_change"
+  | "return";
 
 export interface Movement {
   id: string;

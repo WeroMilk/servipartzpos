@@ -49,19 +49,23 @@ export interface SaleItemForReport {
   price?: number;
 }
 
-/** Llamar desde Caja al registrar una venta. Guarda detalle con precios. */
+/** Llamar desde Caja al registrar una venta. Guarda detalle con precios.
+ * Si totalPaid < subtotal (por descuento), escala los subtotales proporcionalmente. */
 export function addSalesFromImport(
   items: SaleItemForReport[],
-  timestamp: Date
+  timestamp: Date,
+  totalPaid?: number
 ) {
   const iso = timestamp.toISOString();
   const history = getHistory();
   const cut = new Date();
   cut.setDate(cut.getDate() - MAX_DAYS);
   const filtered = history.filter((e) => new Date(e.timestamp) >= cut);
+  const subtotalSum = items.reduce((acc, item) => acc + (item.price ?? 0) * item.quantity, 0);
+  const scale = totalPaid != null && subtotalSum > 0 ? totalPaid / subtotalSum : 1;
   const newEntries: SalesHistoryEntry[] = items.map((item) => {
     const price = item.price ?? 0;
-    const subtotal = item.quantity * price;
+    const subtotal = (item.quantity * price) * scale;
     return {
       timestamp: iso,
       bottleName: item.name,
@@ -90,6 +94,27 @@ function isThisWeek(d: Date): boolean {
 function isThisMonth(d: Date): boolean {
   const t = new Date();
   return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth();
+}
+
+/** Devuelve si d está en el mismo día que ref */
+function isSameDay(d: Date, ref: Date): boolean {
+  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate();
+}
+
+/** Devuelve si d está en la misma semana que ref (domingo a sábado) */
+function isSameWeek(d: Date, ref: Date): boolean {
+  const start = new Date(ref);
+  start.setDate(ref.getDate() - ref.getDay());
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return d >= start && d <= end;
+}
+
+/** Devuelve si d está en el mismo mes que ref */
+function isSameMonth(d: Date, ref: Date): boolean {
+  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
 }
 
 export interface SalesStats {
@@ -177,13 +202,36 @@ export interface SalesStatsForPeriod {
   detailLines: DetailLine[];
 }
 
-function filterByPeriod<T extends { date: Date }>(entries: T[], period: ReportPeriod) {
-  if (period === "day") return entries.filter((e) => isToday(e.date));
-  if (period === "week") return entries.filter((e) => isThisWeek(e.date));
-  return entries.filter((e) => isThisMonth(e.date));
+function filterByPeriod<T extends { date: Date }>(
+  entries: T[],
+  period: ReportPeriod,
+  referenceDate?: Date
+): T[] {
+  const ref = referenceDate ?? new Date();
+  if (period === "day") return entries.filter((e) => isSameDay(e.date, ref));
+  if (period === "week") return entries.filter((e) => isSameWeek(e.date, ref));
+  return entries.filter((e) => isSameMonth(e.date, ref));
 }
 
-export function getSalesStatsForPeriod(period: ReportPeriod): SalesStatsForPeriod {
+function formatPeriodLabel(period: ReportPeriod, referenceDate: Date): string {
+  if (period === "day") {
+    return referenceDate.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  if (period === "week") {
+    const start = new Date(referenceDate);
+    start.setDate(referenceDate.getDate() - referenceDate.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return `${start.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit" })} - ${end.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}`;
+  }
+  return referenceDate.toLocaleDateString("es-MX", { month: "long", year: "numeric" }).replace(/^\w/, (c) => c.toUpperCase());
+}
+
+export function getSalesStatsForPeriod(
+  period: ReportPeriod,
+  referenceDate?: Date
+): SalesStatsForPeriod {
+  const ref = referenceDate ?? new Date();
   const history = getHistory();
   const entries = history.map((e) => ({
     date: new Date(e.timestamp),
@@ -193,7 +241,7 @@ export function getSalesStatsForPeriod(period: ReportPeriod): SalesStatsForPerio
     price: e.price ?? 0,
     subtotal: e.subtotal ?? 0,
   }));
-  const filtered = filterByPeriod(entries, period);
+  const filtered = filterByPeriod(entries, period, ref);
   let total = 0;
   let totalRevenue = 0;
   const byProduct: Record<string, { quantity: number; unit: string; revenue: number }> = {};
@@ -220,8 +268,14 @@ export function getSalesStatsForPeriod(period: ReportPeriod): SalesStatsForPerio
     .sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0) || b.quantity - a.quantity)
     .slice(0, 10);
 
-  const labels: Record<ReportPeriod, string> = { day: "Día (hoy)", week: "Semana", month: "Mes" };
-  return { total, totalRevenue, label: labels[period], topProducts, detailLines };
+  const label = period === "day" && isSameDay(ref, new Date())
+    ? "Día (hoy)"
+    : period === "week" && isSameWeek(ref, new Date())
+      ? "Semana"
+      : period === "month" && isSameMonth(ref, new Date())
+        ? "Mes"
+        : formatPeriodLabel(period, ref);
+  return { total, totalRevenue, label, topProducts, detailLines };
 }
 
 /** Genera texto para descargar como .txt (resumen de todos los períodos) */
@@ -316,8 +370,8 @@ function buildReportHtml(text: string, title: string): string {
 }
 
 /** Imprime el reporte de ventas por período (igual que los tickets) */
-export function printReportForPeriod(period: ReportPeriod): void {
-  const periodStats = getSalesStatsForPeriod(period);
+export function printReportForPeriod(period: ReportPeriod, referenceDate?: Date): void {
+  const periodStats = getSalesStatsForPeriod(period, referenceDate);
   const text = buildReportTextForPeriod(period, periodStats);
   const title = `Reporte ventas - ${periodStats.label}`;
   const html = buildReportHtml(text, title);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3, Store, Wifi, WifiOff } from "lucide-react";
+import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3, Store, Wifi, WifiOff, Clock, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LogoutButton from "@/components/Auth/LogoutButton";
 import { demoAuth } from "@/lib/demoAuth";
@@ -20,6 +20,8 @@ const NAV_ITEMS = [
   { href: "/inventario", icon: Package, label: "Inventario" },
   { href: "/movements", icon: Bell, label: "Movimientos" },
   { href: "/report", icon: DollarSign, label: "Reporte de ventas" },
+  { href: "/turnos", icon: Clock, label: "Turnos" },
+  { href: "/devoluciones", icon: RotateCcw, label: "Devoluciones" },
   { href: "/import-order", icon: PackageOpen, label: "Importar pedido" },
   { href: "/config", icon: Settings, label: "Configuraciones" },
 ] as const;

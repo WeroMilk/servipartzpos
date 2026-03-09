@@ -1,0 +1,415 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { RotateCcw, Search, Plus, Minus, Loader2 } from "lucide-react";
+import { storeStore } from "@/lib/storeStore";
+import { loadInventory, saveInventory, addStockToProduct } from "@/lib/inventoryStorage";
+import { DEFAULT_PRODUCTS } from "@/lib/productsData";
+import { isMeasuredInUnits } from "@/lib/measurementRules";
+import { movementsService } from "@/lib/movements";
+import { addSaleRecord, getSaleByTicket } from "@/lib/salesRegistry";
+import { demoAuth } from "@/lib/demoAuth";
+import type { Bottle, SaleItem } from "@/lib/types";
+
+interface ReturnItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  maxQuantity: number;
+  price?: number;
+}
+
+type Mode = "ticket" | "manual";
+
+export default function DevolucionesPage() {
+  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const [mode, setMode] = useState<Mode>("ticket");
+  const [ticketSearch, setTicketSearch] = useState("");
+  const [ticketResult, setTicketResult] = useState<ReturnItem[] | null>(null);
+  const [ticketError, setTicketError] = useState("");
+  const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
+  const [bottles, setBottles] = useState<Bottle[]>([]);
+  const [search, setSearch] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    setBottles(loadInventory());
+  }, []);
+
+  const handleSearchTicket = () => {
+    const num = parseInt(ticketSearch.trim(), 10);
+    if (isNaN(num) || !storeId) {
+      setTicketError("Ingresa un número de ticket válido");
+      setTicketResult(null);
+      return;
+    }
+    const sale = getSaleByTicket(storeId, num);
+    if (!sale) {
+      setTicketError("Ticket no encontrado");
+      setTicketResult(null);
+      return;
+    }
+    setTicketError("");
+    setTicketResult(
+      sale.items.map((item) => {
+        const bottle = bottles.find((b) => b.id === item.productId);
+        const useUnits = bottle ? isMeasuredInUnits(bottle.category) : true;
+        const maxQty = useUnits
+          ? (bottle?.currentUnits ?? 0) + item.quantity
+          : Math.floor((bottle?.currentOz ?? 0) / 29.57) + item.quantity;
+        return {
+          productId: item.productId,
+          name: item.name,
+          quantity: 0,
+          maxQuantity: item.quantity,
+          price: item.price,
+        };
+      })
+    );
+    setReturnItems([]);
+  };
+
+  const addManualItem = (bottle: Bottle, qty: number) => {
+    const useUnits = isMeasuredInUnits(bottle.category);
+    const stock = useUnits
+      ? (bottle.currentUnits ?? 0)
+      : Math.floor((bottle.currentOz ?? 0) / 29.57);
+    if (qty <= 0 || qty > stock) return;
+    setReturnItems((prev) => {
+      const existing = prev.find((p) => p.productId === bottle.id);
+      if (existing) {
+        const newQty = Math.min(existing.quantity + qty, stock);
+        if (newQty === 0) return prev.filter((p) => p.productId !== bottle.id);
+        return prev.map((p) =>
+          p.productId === bottle.id ? { ...p, quantity: newQty, maxQuantity: stock } : p
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: bottle.id,
+          name: bottle.name,
+          quantity: qty,
+          maxQuantity: stock,
+          price: bottle.price,
+        },
+      ];
+    });
+  };
+
+  const updateReturnQty = (productId: string, delta: number) => {
+    const source = mode === "ticket" ? ticketResult : returnItems;
+    if (!source) return;
+    const item = source.find((i) => i.productId === productId);
+    if (!item) return;
+    setReturnItems((prev) => {
+      const existing = prev.find((p) => p.productId === productId);
+      const base = existing ?? { ...item, quantity: 0 };
+      const newQty = Math.max(0, Math.min(base.quantity + delta, base.maxQuantity));
+      if (newQty === 0) return prev.filter((p) => p.productId !== productId);
+      if (existing) {
+        return prev.map((p) =>
+          p.productId === productId ? { ...p, quantity: newQty } : p
+        );
+      }
+      return [...prev, { ...base, quantity: newQty }];
+    });
+  };
+
+  const itemsToReturn =
+    mode === "ticket"
+      ? ticketResult?.map((t) => {
+          const inCart = returnItems.find((r) => r.productId === t.productId);
+          return inCart ? { ...t, quantity: inCart.quantity } : t;
+        }) ?? []
+      : returnItems;
+
+  const totalToReturn = itemsToReturn.filter((i) => i.quantity > 0);
+  const totalAmount = totalToReturn.reduce(
+    (acc, i) => acc + (i.price ?? 0) * i.quantity,
+    0
+  );
+
+  const handleConfirmReturn = async () => {
+    if (totalToReturn.length === 0) {
+      alert("Selecciona productos a devolver");
+      return;
+    }
+    setProcessing(true);
+    try {
+      const currentBottles = loadInventory();
+      const saleItems: SaleItem[] = totalToReturn.map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
+      }));
+
+      for (const item of totalToReturn) {
+        const bottle = currentBottles.find((b) => b.id === item.productId);
+        if (!bottle) continue;
+        const useUnits = isMeasuredInUnits(bottle.category);
+        addStockToProduct(item.productId, item.quantity, useUnits);
+        movementsService.add({
+          type: "return",
+          bottleId: item.productId,
+          bottleName: item.name,
+          newValue: item.quantity,
+          userName: demoAuth.getCurrentUser()?.name ?? "Sistema",
+          description: `Devolución: ${item.name} +${item.quantity} unid`,
+        });
+      }
+
+      addSaleRecord({
+        ticketNumber: 0,
+        storeId: storeId ?? "default",
+        items: saleItems.map((s) => ({ ...s, quantity: -s.quantity })),
+        total: -totalAmount,
+        employeeName: demoAuth.getCurrentUser()?.name,
+        type: "return",
+      });
+
+      setReturnItems([]);
+      setTicketResult(null);
+      setTicketSearch("");
+      setBottles(loadInventory());
+      alert("Devolución registrada correctamente");
+    } catch (e) {
+      console.error(e);
+      alert("Error al registrar la devolución");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const filteredBottles = bottles.filter(
+    (b) =>
+      !search.trim() ||
+      b.name.toLowerCase().includes(search.toLowerCase()) ||
+      b.id === search.trim()
+  );
+
+  return (
+    <div className="h-full min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 px-4 pt-2 pb-1">
+        <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+          <RotateCcw className="w-5 h-5 text-primary-600" />
+          Devoluciones
+        </h2>
+        <p className="text-xs text-slate-500">Registra devoluciones por ticket o manual</p>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("ticket");
+              setTicketResult(null);
+              setReturnItems([]);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium ${
+              mode === "ticket"
+                ? "bg-primary-600 text-white"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            Por ticket
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("manual");
+              setTicketResult(null);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium ${
+              mode === "manual"
+                ? "bg-primary-600 text-white"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            Manual
+          </button>
+        </div>
+
+        {mode === "ticket" && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Número de ticket
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Ej: 42"
+                value={ticketSearch}
+                onChange={(e) => setTicketSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchTicket()}
+                className="flex-1 px-4 py-3 border border-slate-200 rounded-xl"
+              />
+              <button
+                type="button"
+                onClick={handleSearchTicket}
+                className="px-4 py-3 bg-primary-600 text-white font-medium rounded-xl"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+            </div>
+            {ticketError && (
+              <p className="text-sm text-red-600">{ticketError}</p>
+            )}
+            {ticketResult && ticketResult.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-slate-700">
+                  Productos del ticket (selecciona cantidades a devolver)
+                </p>
+                {ticketResult.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-xl"
+                  >
+                    <span className="font-medium text-sm truncate flex-1 mr-2">
+                      {item.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateReturnQty(item.productId, -1)
+                        }
+                        className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-medium">
+                        {returnItems.find((r) => r.productId === item.productId)?.quantity ?? 0}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateReturnQty(item.productId, 1)
+                        }
+                        className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs text-slate-500">
+                        máx {item.maxQuantity}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === "manual" && (
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Buscar producto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl"
+            />
+            <div className="max-h-48 overflow-y-auto space-y-1">
+              {filteredBottles.map((bottle) => {
+                const useUnits = isMeasuredInUnits(bottle.category);
+                const stock = useUnits
+                  ? (bottle.currentUnits ?? 0)
+                  : Math.floor((bottle.currentOz ?? 0) / 29.57);
+                if (stock <= 0) return null;
+                return (
+                  <div
+                    key={bottle.id}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50"
+                  >
+                    <span className="text-sm truncate flex-1">{bottle.name}</span>
+                    <div className="flex gap-1">
+                      {[1, 2, 5].map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => addManualItem(bottle, q)}
+                          disabled={stock < q}
+                          className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded hover:bg-primary-200 disabled:opacity-40"
+                        >
+                          +{q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {returnItems.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-slate-700">
+                  Productos a devolver
+                </p>
+                {returnItems.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-xl"
+                  >
+                    <span className="font-medium text-sm truncate flex-1 mr-2">
+                      {item.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateReturnQty(item.productId, -1)
+                        }
+                        className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-medium">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateReturnQty(item.productId, 1)
+                        }
+                        className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {totalToReturn.length > 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex justify-between font-semibold mb-3">
+              <span>Total a devolver</span>
+              <span className="text-emerald-600">
+                ${totalAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleConfirmReturn}
+              disabled={processing}
+              className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {processing ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <RotateCcw className="w-5 h-5" />
+              )}
+              Confirmar devolución
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

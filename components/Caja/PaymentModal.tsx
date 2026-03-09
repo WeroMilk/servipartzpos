@@ -1,13 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, CreditCard, Smartphone, X } from "lucide-react";
-import type { PaymentMethod } from "@/lib/types";
+import { Banknote, CreditCard, Smartphone, X, Plus, Trash2 } from "lucide-react";
+import type { PaymentMethod, PaymentSplit } from "@/lib/types";
+
+interface PaymentRow {
+  id: string;
+  method: PaymentMethod;
+  cardType?: "debito" | "credito";
+  amount: string;
+  amountReceived?: string;
+}
+
+function getPaymentMethod(m: PaymentMethod, cardType?: "debito" | "credito"): PaymentMethod {
+  if (m === "tarjeta") return cardType === "credito" ? "tarjeta_credito" : "tarjeta_debito";
+  return m;
+}
 
 interface PaymentModalProps {
   total: number;
   onConfirm: (payment: {
-    method: PaymentMethod;
+    method?: PaymentMethod;
+    payments: PaymentSplit[];
     amountReceived?: number;
     change?: number;
   }) => void;
@@ -15,37 +29,79 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ total, onConfirm, onClose }: PaymentModalProps) {
-  const [method, setMethod] = useState<PaymentMethod>("efectivo");
-  const [cardType, setCardType] = useState<"debito" | "credito">("debito");
-  const [amountReceived, setAmountReceived] = useState("");
+  const [rows, setRows] = useState<PaymentRow[]>([
+    { id: "1", method: "efectivo", amount: "", amountReceived: "" },
+  ]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const amountNum = parseFloat(amountReceived.replace(",", ".")) || 0;
-  const change = method === "efectivo" && amountNum >= total ? amountNum - total : 0;
-  const canConfirm =
-    method !== "efectivo" || (amountNum >= total && amountNum > 0);
+  const addRow = () => {
+    setRows((prev) => [
+      ...prev,
+      {
+        id: `row-${Date.now()}`,
+        method: "efectivo",
+        amount: "",
+        amountReceived: "",
+      },
+    ]);
+  };
+
+  const removeRow = (id: string) => {
+    if (rows.length <= 1) return;
+    setRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const updateRow = (id: string, updates: Partial<PaymentRow>) => {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    );
+  };
+
+  const totalPaid = rows.reduce((acc, r) => {
+    const amt = parseFloat(r.amount.replace(",", ".")) || 0;
+    return acc + amt;
+  }, 0);
+
+  const efectivoRow = rows.find((r) => r.method === "efectivo");
+  const efectivoAmount = efectivoRow ? parseFloat(efectivoRow.amount.replace(",", ".")) || 0 : 0;
+  const efectivoReceived = efectivoRow ? parseFloat(efectivoRow.amountReceived?.replace(",", ".") || "0") || 0 : 0;
+  const change = efectivoReceived > efectivoAmount ? efectivoReceived - efectivoAmount : 0;
+
+  const canConfirm = totalPaid >= total && totalPaid > 0;
 
   const handleConfirm = () => {
     if (submitting || !canConfirm) {
-      if (!canConfirm) setError(method === "efectivo" ? "El monto debe ser mayor o igual al total" : "");
+      if (!canConfirm) setError(totalPaid < total ? "La suma debe ser mayor o igual al total" : "Completa los datos");
+      return;
+    }
+    if (totalPaid < total) {
+      setError("La suma debe ser mayor o igual al total");
       return;
     }
     setError("");
     setSubmitting(true);
-    const finalMethod: PaymentMethod =
-      method === "tarjeta" ? (cardType === "debito" ? "tarjeta_debito" : "tarjeta_credito") : method;
+
+    const payments: PaymentSplit[] = rows.map((r) => ({
+      method: getPaymentMethod(r.method, r.cardType),
+      amount: parseFloat(r.amount.replace(",", ".")) || 0,
+    })).filter((p) => p.amount > 0);
+
+    const totalEfectivo = payments.filter((p) => p.method === "efectivo").reduce((a, p) => a + p.amount, 0);
+    const amountReceived = totalEfectivo > 0 && efectivoReceived >= totalEfectivo ? efectivoReceived : totalEfectivo > 0 ? totalEfectivo : undefined;
+    const changeToGive = amountReceived != null && amountReceived > totalEfectivo ? amountReceived - totalEfectivo : 0;
+
     onConfirm({
-      method: finalMethod,
-      amountReceived: method === "efectivo" ? amountNum : undefined,
-      change: method === "efectivo" ? change : undefined,
+      payments,
+      amountReceived: amountReceived && amountReceived > 0 ? amountReceived : undefined,
+      change: changeToGive > 0 ? changeToGive : undefined,
     });
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
+        <div className="flex-shrink-0 flex items-center justify-between border-b border-slate-200 p-4">
           <h3 className="text-lg font-semibold text-slate-900">Método de pago</h3>
           <button
             type="button"
@@ -57,7 +113,7 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
           <div>
             <p className="text-sm text-slate-500 mb-1">Total a cobrar</p>
             <p className="text-2xl font-bold text-slate-900">
@@ -66,107 +122,116 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
           </div>
 
           <div>
-            <p className="text-sm font-medium text-slate-700 mb-2">Selecciona el método</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-slate-700">Pagos</p>
               <button
                 type="button"
-                onClick={() => setMethod("efectivo")}
-                className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
-                  method === "efectivo"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 hover:border-slate-300"
-                }`}
+                onClick={addRow}
+                className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
               >
-                <Banknote className="w-6 h-6" />
-                <span className="text-xs font-medium">Efectivo</span>
+                <Plus className="w-4 h-4" />
+                Añadir pago
               </button>
-              <button
-                type="button"
-                onClick={() => setMethod("tarjeta")}
-                className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
-                  method === "tarjeta"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <CreditCard className="w-6 h-6" />
-                <span className="text-xs font-medium">Tarjeta</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod("transferencia")}
-                className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
-                  method === "transferencia"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <Smartphone className="w-6 h-6" />
-                <span className="text-xs font-medium">Transferencia</span>
-              </button>
+            </div>
+            <div className="space-y-3">
+              {rows.map((row) => (
+                <div key={row.id} className="flex gap-2 items-start p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex gap-2">
+                      <select
+                        value={row.method}
+                        onChange={(e) =>
+                          updateRow(row.id, {
+                            method: e.target.value as PaymentMethod,
+                            cardType: undefined,
+                            amountReceived: undefined,
+                          })
+                        }
+                        className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                      >
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="transferencia">Transferencia</option>
+                      </select>
+                      {rows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(row.id)}
+                          className="p-2 text-slate-400 hover:text-red-600"
+                          aria-label="Quitar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    {row.method === "tarjeta" && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateRow(row.id, { cardType: "debito" })}
+                          className={`flex-1 py-2 px-2 text-xs font-medium rounded-lg border ${
+                            (row.cardType ?? "debito") === "debito"
+                              ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200"
+                          }`}
+                        >
+                          Débito
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateRow(row.id, { cardType: "credito" })}
+                          className={`flex-1 py-2 px-2 text-xs font-medium rounded-lg border ${
+                            row.cardType === "credito"
+                              ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200"
+                          }`}
+                        >
+                          Crédito
+                        </button>
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Monto"
+                        value={row.amount}
+                        onChange={(e) => updateRow(row.id, { amount: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                      />
+                      {row.method === "efectivo" && (
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="Recibido (para cambio)"
+                          value={row.amountReceived ?? ""}
+                          onChange={(e) => updateRow(row.id, { amountReceived: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 text-xs border border-slate-200 rounded-lg"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {method === "tarjeta" && (
-            <div>
-              <p className="text-sm font-medium text-slate-700 mb-2">¿Débito o crédito?</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCardType("debito")}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
-                    cardType === "debito"
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                      : "border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <CreditCard className="w-6 h-6" />
-                  <span className="text-xs font-medium">Débito</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCardType("credito")}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
-                    cardType === "credito"
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                      : "border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <CreditCard className="w-6 h-6" />
-                  <span className="text-xs font-medium">Crédito</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {method === "efectivo" && (
-            <div>
-              <label htmlFor="amount-received" className="block text-sm font-medium text-slate-700 mb-1">
-                Monto recibido
-              </label>
-              <input
-                id="amount-received"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
-                value={amountReceived}
-                onChange={(e) => setAmountReceived(e.target.value)}
-                placeholder="0.00"
-                className="w-full px-4 py-3 text-lg border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              />
-              {amountNum >= total && amountNum > 0 && (
-                <p className="mt-2 text-sm font-semibold text-emerald-600">
-                  Cambio a devolver: ${change.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </p>
-              )}
-            </div>
+          <div className="flex justify-between text-sm font-medium">
+            <span className="text-slate-600">Total pagado</span>
+            <span className={totalPaid >= total ? "text-emerald-600" : "text-slate-900"}>
+              ${totalPaid.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          {change > 0 && (
+            <p className="text-sm font-semibold text-emerald-600">
+              Cambio a devolver: ${change.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+            </p>
           )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
 
-        <div className="p-4 border-t border-slate-200">
+        <div className="flex-shrink-0 p-4 border-t border-slate-200">
           <button
             type="button"
             onClick={handleConfirm}

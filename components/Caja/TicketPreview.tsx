@@ -48,8 +48,17 @@ export default function TicketPreview({ data, onNewSale }: TicketPreviewProps) {
     minute: "2-digit",
   });
   const ticketNum = String(data.ticketNumber).padStart(6, "0");
-  const paymentLabel =
-    data.paymentMethod === "tarjeta_debito"
+  const paymentLabel = data.payments?.length
+    ? data.payments
+        .map((p) =>
+          p.method === "tarjeta_debito"
+            ? `Tarjeta débito $${p.amount.toFixed(2)}`
+            : p.method === "tarjeta_credito"
+              ? `Tarjeta crédito $${p.amount.toFixed(2)}`
+              : `${p.method.charAt(0).toUpperCase() + p.method.slice(1)} $${p.amount.toFixed(2)}`
+        )
+        .join(", ")
+    : data.paymentMethod === "tarjeta_debito"
       ? "Tarjeta débito"
       : data.paymentMethod === "tarjeta_credito"
         ? "Tarjeta crédito"
@@ -79,6 +88,18 @@ export default function TicketPreview({ data, onNewSale }: TicketPreviewProps) {
                 </div>
               );
             })}
+            {data.subtotalBeforeDiscount != null && data.discountTotal != null && data.discountTotal > 0 && (
+              <>
+                <div className="border-t border-slate-200 mt-2 pt-2 flex justify-between text-slate-600">
+                  <span>Subtotal</span>
+                  <span>${data.subtotalBeforeDiscount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-emerald-600">
+                  <span>Descuento</span>
+                  <span>-${data.discountTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                </div>
+              </>
+            )}
             <div className="border-t border-slate-200 mt-2 pt-2 font-semibold">
               Total: ${data.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </div>

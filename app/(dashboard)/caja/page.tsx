@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package, Percent, DollarSign } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
 import { movementsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
+import { addSaleRecord } from "@/lib/salesRegistry";
+import { getCurrentShift } from "@/lib/shiftService";
 import { processQueue } from "@/lib/syncQueue";
 import { setLastSaleImport } from "@/lib/lastSaleImport";
 import { demoAuth } from "@/lib/demoAuth";
@@ -36,6 +38,8 @@ export default function CajaPage() {
   const [processing, setProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<string>("");
+  const [discountAmount, setDiscountAmount] = useState<string>("");
 
   const refreshData = useCallback(() => {
     setBottles(loadInventoryFromStorage());
@@ -119,10 +123,23 @@ export default function CajaPage() {
     setCart((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const total = cart.reduce((acc, c) => acc + (c.price ?? 0) * c.quantity, 0);
+  const subtotalBeforeDiscount = cart.reduce((acc, c) => acc + (c.price ?? 0) * c.quantity, 0);
+  const discountTotal =
+    discountPercent.trim() !== ""
+      ? Math.min(subtotalBeforeDiscount * (parseFloat(discountPercent.replace(",", ".")) || 0) / 100, subtotalBeforeDiscount)
+      : discountAmount.trim() !== ""
+        ? Math.min(parseFloat(discountAmount.replace(",", ".")) || 0, subtotalBeforeDiscount)
+        : 0;
+  const total = Math.max(0, subtotalBeforeDiscount - discountTotal);
+
+  const clearDiscount = () => {
+    setDiscountPercent("");
+    setDiscountAmount("");
+  };
 
   const processSaleWithPayment = async (payment: {
-    method: PaymentMethod;
+    method?: PaymentMethod;
+    payments?: { method: PaymentMethod; amount: number }[];
     amountReceived?: number;
     change?: number;
   }) => {
@@ -130,6 +147,7 @@ export default function CajaPage() {
     if (cartToProcess.length === 0) return;
     // Vaciar carrito de inmediato para evitar doble cobro si el usuario hace doble clic
     setCart([]);
+    clearDiscount();
     setShowPaymentModal(false);
     setProcessing(true);
     const saleItems: SaleItem[] = cartToProcess.map((c) => ({
@@ -167,7 +185,8 @@ export default function CajaPage() {
       saveInventory(currentBottles);
       addSalesFromImport(
         saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
-        saleDate
+        saleDate,
+        discountTotal > 0 ? total : undefined
       );
       applied.forEach((a) => {
         movementsService.add({
@@ -181,14 +200,35 @@ export default function CajaPage() {
       });
 
       setLastSaleImport();
+      const payments = payment.payments ?? [];
+      const currentShift = getCurrentShift(storeId ?? "default");
+      addSaleRecord({
+        ticketNumber,
+        storeId: storeId ?? "default",
+        shiftId: currentShift?.id,
+        items: saleItems,
+        total,
+        subtotalBeforeDiscount: discountTotal > 0 ? subtotalBeforeDiscount : undefined,
+        discountTotal: discountTotal > 0 ? discountTotal : undefined,
+        payments: payments.length ? payments : undefined,
+        paymentMethod: payments.length ? undefined : payment.method,
+        amountReceived: payment.amountReceived,
+        change: payment.change,
+        employeeName: demoAuth.getCurrentUser()?.name,
+        type: "sale",
+      });
+      const paymentMethod = payments.length ? payments[0].method : payment.method ?? "efectivo";
       setTicketData({
         items: saleItems,
         total,
         ticketNumber,
         employeeName: demoAuth.getCurrentUser()?.name,
-        paymentMethod: payment.method,
+        paymentMethod,
+        payments: payments.length ? payments : undefined,
         amountReceived: payment.amountReceived,
         change: payment.change,
+        subtotalBeforeDiscount: discountTotal > 0 ? subtotalBeforeDiscount : undefined,
+        discountTotal: discountTotal > 0 ? discountTotal : undefined,
         date: saleDate,
       });
     } catch (e) {
@@ -351,11 +391,70 @@ export default function CajaPage() {
             )}
           </div>
           <div className="p-3 border-t border-slate-200 bg-white">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-slate-500">Total</span>
-              <span className="text-xl font-bold text-slate-900">
-                {total > 0 ? `$${total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"}
-              </span>
+            {cart.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs font-medium text-slate-600">Descuento</p>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Percent className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="%"
+                      value={discountPercent}
+                      onChange={(e) => {
+                        setDiscountPercent(e.target.value);
+                        if (e.target.value.trim()) setDiscountAmount("");
+                      }}
+                      className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="flex-1 relative">
+                    <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="$"
+                      value={discountAmount}
+                      onChange={(e) => {
+                        setDiscountAmount(e.target.value);
+                        if (e.target.value.trim()) setDiscountPercent("");
+                      }}
+                      className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  {(discountPercent || discountAmount) && (
+                    <button
+                      type="button"
+                      onClick={clearDiscount}
+                      className="px-2 py-2 text-slate-500 hover:text-slate-700"
+                      aria-label="Quitar descuento"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="space-y-1 mb-3">
+              {discountTotal > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>Subtotal</span>
+                    <span>${subtotalBeforeDiscount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-emerald-600">
+                    <span>Descuento</span>
+                    <span>-${discountTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-500">Total</span>
+                <span className="text-xl font-bold text-slate-900">
+                  {total > 0 ? `$${total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"}
+                </span>
+              </div>
             </div>
             <button
               type="button"
