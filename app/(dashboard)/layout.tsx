@@ -28,16 +28,19 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname === "/report" || pathname === "/inventario" || pathname?.startsWith("/admin");
+    // Vendedor (Gabriel): auto-asignar tienda default si no tiene, para evitar bucle con /stores restringido
+    if (demoAuth.isLimitedUser() && !storeStore.getStoreId()) {
+      storeStore.setStore("default", demoAuth.getCurrentUser()?.storeName ?? "Matriz");
+    }
     if (!skipStoreCheck && !storeStore.getStoreId()) {
       router.replace("/stores");
     }
   }, [pathname, router]);
 
-  // Usuario limitado (Gabriel): solo caja, turnos y reporte
+  // Usuario limitado (Gabriel): solo caja, inventario, turnos y devoluciones
   const restrictedForLimited = [
-    "/inventario",
+    "/report",
     "/movements",
-    "/devoluciones",
     "/import-order",
     "/config",
     "/cfdi",

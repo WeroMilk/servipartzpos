@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RotateCcw, Search, Plus, Minus, Loader2 } from "lucide-react";
+import { RotateCcw, Search, Plus, Minus, Loader2, Lock } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { loadInventory, saveInventory, addStockToProduct } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
@@ -21,8 +21,17 @@ interface ReturnItem {
 
 type Mode = "ticket" | "manual";
 
+const DEVO_AUTH_KEY = "gabriel-devoluciones-authorized";
+
 export default function DevolucionesPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const isLimited = demoAuth.isLimitedUser();
+  const [managerPassword, setManagerPassword] = useState("");
+  const [managerPasswordError, setManagerPasswordError] = useState("");
+  const [authorized, setAuthorized] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!sessionStorage.getItem(DEVO_AUTH_KEY);
+  });
   const [mode, setMode] = useState<Mode>("ticket");
   const [ticketSearch, setTicketSearch] = useState("");
   const [ticketResult, setTicketResult] = useState<ReturnItem[] | null>(null);
@@ -35,6 +44,17 @@ export default function DevolucionesPage() {
   useEffect(() => {
     setBottles(loadInventory());
   }, []);
+
+  const handleManagerAuth = () => {
+    if (demoAuth.verifyManagerPassword(managerPassword)) {
+      sessionStorage.setItem(DEVO_AUTH_KEY, "1");
+      setAuthorized(true);
+      setManagerPassword("");
+      setManagerPasswordError("");
+    } else {
+      setManagerPasswordError("Contraseña incorrecta");
+    }
+  };
 
   const handleSearchTicket = () => {
     const num = parseInt(ticketSearch.trim(), 10);
@@ -188,6 +208,46 @@ export default function DevolucionesPage() {
       b.name.toLowerCase().includes(search.toLowerCase()) ||
       b.id === search.trim()
   );
+
+  // Vendedor (Gabriel): requiere contraseña del gerente (Piti) para acceder
+  if (isLimited && !authorized) {
+    return (
+      <div className="h-full min-h-0 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100">
+            <Lock className="w-6 h-6 text-amber-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">
+            Autorización requerida
+          </h3>
+          <p className="text-sm text-slate-600 text-center mb-4">
+            Para registrar devoluciones necesitas la contraseña del gerente (Piti).
+          </p>
+          <input
+            type="password"
+            placeholder="Contraseña del gerente"
+            value={managerPassword}
+            onChange={(e) => {
+              setManagerPassword(e.target.value);
+              setManagerPasswordError("");
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleManagerAuth()}
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl mb-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+          {managerPasswordError && (
+            <p className="text-sm text-red-600 mb-2">{managerPasswordError}</p>
+          )}
+          <button
+            type="button"
+            onClick={handleManagerAuth}
+            className="w-full py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700"
+          >
+            Verificar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">

@@ -96,7 +96,7 @@ export const demoAuth = {
     return demoAuth.getCurrentUser() !== null;
   },
 
-  /** Usuario limitado (Gabriel): solo turnos, caja y reporte de su turno actual */
+  /** Usuario limitado (Gabriel): vendedor - solo caja, inventario, turnos y devoluciones (devoluciones pide contraseña de Piti) */
   isLimitedUser: (): boolean => {
     const user = demoAuth.getCurrentUser();
     if (!user) return false;
@@ -110,6 +110,13 @@ export const demoAuth = {
     if (!user) return false;
     const email = (user.email || "").toLowerCase();
     return email === "zavala@servipartz.com";
+  },
+
+  /** Verifica contraseña del gerente (Piti) para permitir acciones restringidas a vendedores */
+  verifyManagerPassword: (password: string): boolean => {
+    const users = getRegisteredUsers();
+    const manager = users.find((u) => (u.email || "").toLowerCase() === "zavala@servipartz.com");
+    return manager ? manager.password === password : false;
   },
 
   updateStoreName: (storeName: string): void => {

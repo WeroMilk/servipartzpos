@@ -26,8 +26,8 @@ const NAV_ITEMS = [
   { href: "/config", icon: Settings, label: "Configuraciones" },
 ] as const;
 
-/** Solo Caja, Turnos y Reporte para usuario limitado (Gabriel) */
-const LIMITED_NAV_HREFS = new Set(["/caja", "/report", "/turnos"]);
+/** Solo Punto de venta, Inventario, Turnos y Devoluciones para vendedor (Gabriel) */
+const LIMITED_NAV_HREFS = new Set(["/caja", "/inventario", "/turnos", "/devoluciones"]);
 
 const ADMIN_NAV = { href: "/admin", icon: BarChart3, label: "Panel gerente" };
 const STORES_NAV = { href: "/stores", icon: Store, label: "Gestión de tiendas" };
