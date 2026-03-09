@@ -152,7 +152,7 @@ export default function InventoryVerification({
               className="modal-box bg-apple-surface rounded-2xl p-4 sm:p-6 w-full shadow-2xl flex-shrink-0"
             >
               <h3 className="text-lg font-semibold text-apple-text mb-2">
-                Contraseña de Gerente
+                Contraseña de empleado
               </h3>
               <p className="text-sm text-apple-text2 mb-4">
                 Se requiere contraseña de gerente para editar el inventario

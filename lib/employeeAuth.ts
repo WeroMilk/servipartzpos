@@ -13,9 +13,9 @@ export interface Employee {
 
 /** Valores por defecto (id, label y contraseña inicial). */
 export const EMPLOYEES: Employee[] = [
-  { id: "Gerente", label: "Gerente", password: "gerente123" },
-  { id: "001", label: "ID 001", password: "empleado001" },
-  { id: "002", label: "ID 002", password: "empleado002" },
+  { id: "Gerente", label: "Piti", password: "gerente123" },
+  { id: "001", label: "Gabriel (ID 001)", password: "empleado001" },
+  { id: "002", label: "Alfonso", password: "empleado002" },
 ];
 
 function getStoredPasswords(): Record<string, string> {
