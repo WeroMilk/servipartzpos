@@ -33,6 +33,8 @@ export default function ReportPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePrint = () => printReportForPeriod(downloadPeriod);
+
   if (!stats) {
     return (
       <div className="h-full flex items-center justify-center">
