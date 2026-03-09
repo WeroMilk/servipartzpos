@@ -1,5 +1,7 @@
 // Sistema de autenticación demo para pruebas sin Firebase
-// Usuario de prueba predefinido
+// Sin credenciales hardcodeadas por seguridad
+
+const REGISTERED_KEY = "servipartz-demo-registered";
 
 export interface DemoUser {
   email: string;
@@ -10,24 +12,21 @@ export interface DemoUser {
   storeIds?: string[];
 }
 
-export const DEMO_USERS: DemoUser[] = [
-  {
-    email: "zavala@servipartz.com",
-    password: "sombra123",
-    name: "Zavala",
-    storeName: "Servipartz Hermosillo",
-    role: "admin",
-    storeIds: ["default"],
-  },
-  {
-    email: "gabriel@servipartz.com",
-    password: "veneno123",
-    name: "Gabriel",
-    storeName: "Servipartz Hermosillo",
-    role: "store_user",
-    storeIds: ["default"],
-  },
-];
+function getRegisteredUsers(): DemoUser[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(REGISTERED_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveRegisteredUsers(users: DemoUser[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(REGISTERED_KEY, JSON.stringify(users));
+}
 
 let currentDemoUser: DemoUser | null = null;
 
@@ -35,9 +34,8 @@ export const demoAuth = {
   signIn: (email: string, password: string): Promise<DemoUser> => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        const user = DEMO_USERS.find(
-          (u) => u.email === email && u.password === password
-        );
+        const users = getRegisteredUsers();
+        const user = users.find((u) => u.email === email && u.password === password);
         if (user) {
           currentDemoUser = user;
           localStorage.setItem("demo_user", JSON.stringify(user));
@@ -52,7 +50,8 @@ export const demoAuth = {
   signUp: (email: string, password: string, name?: string, storeName?: string): Promise<DemoUser> => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        if (DEMO_USERS.find((u) => u.email === email)) {
+        const users = getRegisteredUsers();
+        if (users.find((u) => u.email === email)) {
           reject(new Error("El usuario ya existe"));
           return;
         }
@@ -61,8 +60,11 @@ export const demoAuth = {
           password,
           name: name || email.split("@")[0],
           storeName: storeName || "Matriz",
+          role: "admin",
+          storeIds: ["default"],
         };
-        DEMO_USERS.push(newUser);
+        users.push(newUser);
+        saveRegisteredUsers(users);
         currentDemoUser = newUser;
         localStorage.setItem("demo_user", JSON.stringify(newUser));
         resolve(newUser);
