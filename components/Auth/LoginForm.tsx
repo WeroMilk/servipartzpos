@@ -135,6 +135,7 @@ export default function LoginForm() {
             </button>
           </form>
 
+          {/* No mostrar nunca credenciales de prueba ni usuarios demo en la UI */}
           <footer className="mt-6 pt-4 border-t border-apple-border">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-apple-text2">
               <a href="/legal/privacidad" className="hover:text-apple-accent transition-colors">
