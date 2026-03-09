@@ -127,4 +127,25 @@ export const demoAuth = {
       localStorage.setItem("demo_user", JSON.stringify(user));
     }
   },
+
+  /** Lista usuarios registrados (solo admin). No expone contraseñas. */
+  getRegisteredUsersForAdmin: (): Omit<DemoUser, "password">[] => {
+    const users = getRegisteredUsers();
+    return users.map(({ password: _, ...u }) => u);
+  },
+
+  /** Actualiza las tiendas asignadas a un vendedor/usuario. */
+  updateUserStoreIds: (email: string, storeIds: string[]): void => {
+    const users = getRegisteredUsers();
+    const idx = users.findIndex((u) => (u.email || "").toLowerCase() === email.toLowerCase());
+    if (idx === -1) return;
+    users[idx].storeIds = storeIds.length > 0 ? storeIds : ["default"];
+    saveRegisteredUsers(users);
+    const current = demoAuth.getCurrentUser();
+    if (current && (current.email || "").toLowerCase() === email.toLowerCase()) {
+      current.storeIds = users[idx].storeIds;
+      currentDemoUser = current;
+      localStorage.setItem("demo_user", JSON.stringify(current));
+    }
+  },
 };

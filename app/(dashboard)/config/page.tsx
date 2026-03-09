@@ -6,10 +6,11 @@ import { employeeAuth } from "@/lib/employeeAuth";
 import type { Employee } from "@/lib/employeeAuth";
 import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
+import { localStores } from "@/lib/localStores";
 import { loadInventory } from "@/lib/inventoryStorage";
 import { buildOrderReport } from "@/lib/orderReport";
 import { exportInventory, exportSales, exportMovements, exportAll } from "@/lib/exportService";
-import { Lock, Package, ShoppingCart, Download, MessageCircle, Check, Loader2, Store, Database, FileJson, FileText, ArrowRight } from "lucide-react";
+import { Lock, Package, ShoppingCart, Download, MessageCircle, Check, Loader2, Store, Database, FileJson, FileText, ArrowRight, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const WHATSAPP_RECIPIENTS = [
@@ -32,9 +33,23 @@ export default function ConfigPage() {
   useEffect(() => {
     setEmployees(employeeAuth.getEmployees());
   }, []);
+
+  const registeredUsers = demoAuth.getRegisteredUsersForAdmin();
+  const allStores = localStores.getAll().length > 0
+    ? localStores.getAll()
+    : localStores.ensureDefault(demoAuth.getCurrentUser()?.storeName ?? "Matriz");
+
+  useEffect(() => {
+    const init: Record<string, string[]> = {};
+    demoAuth.getRegisteredUsersForAdmin().forEach((u) => {
+      init[u.email] = u.storeIds ?? ["default"];
+    });
+    setUserStoreAssignments(init);
+  }, []);
   const [orderReportText, setOrderReportText] = useState("");
   const [orderRecipient, setOrderRecipient] = useState(WHATSAPP_RECIPIENTS[0]?.value ?? "");
   const [exporting, setExporting] = useState<string | null>(null);
+  const [userStoreAssignments, setUserStoreAssignments] = useState<Record<string, string[]>>({});
 
   const handleGenerateOrder = () => {
     const bottles = loadInventory();
@@ -113,6 +128,33 @@ export default function ConfigPage() {
     });
     notificationsService.incrementUnread();
     return true;
+  };
+
+  const handleStoreAssignmentChange = (email: string, storeId: string, checked: boolean) => {
+    setUserStoreAssignments((prev) => {
+      const current = prev[email] ?? ["default"];
+      let next: string[];
+      if (checked) {
+        next = current.includes(storeId) ? current : [...current, storeId];
+      } else {
+        next = current.filter((id) => id !== storeId);
+      }
+      if (next.length === 0) next = ["default"];
+      return { ...prev, [email]: next };
+    });
+  };
+
+  const handleSaveStoreAssignment = (email: string) => {
+    const storeIds = userStoreAssignments[email] ?? ["default"];
+    demoAuth.updateUserStoreIds(email, storeIds);
+    movementsService.add({
+      type: "store_name_change",
+      bottleId: "_",
+      bottleName: "Configuración",
+      newValue: 0,
+      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      description: `Tiendas asignadas a ${email} actualizadas`,
+    });
   };
 
   const onSavePassword = (emp: Employee) => {
@@ -211,6 +253,63 @@ export default function ConfigPage() {
               </button>
             </div>
           </section>
+
+          {/* Asignación de tiendas por vendedor - solo admin */}
+          {demoAuth.isAdminUser() && registeredUsers.length > 0 && (
+            <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
+              <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
+                <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                  <Users className="w-4 h-4 text-apple-accent" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm sm:text-base font-semibold text-apple-text">Tiendas por vendedor</h2>
+                  <p className="text-xs sm:text-sm text-apple-text2 break-words">Asigna a cada vendedor la tienda o tiendas donde puede trabajar.</p>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 overflow-x-hidden p-2 sm:p-4 space-y-4">
+                {registeredUsers.map((user) => (
+                  <div key={user.email} className="rounded-lg sm:rounded-xl border border-apple-border bg-apple-bg/50 p-3 sm:p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div>
+                        <p className="font-medium text-apple-text text-sm">{user.name ?? user.email}</p>
+                        <p className="text-xs text-apple-text2">{user.email}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveStoreAssignment(user.email)}
+                        className="shrink-0 px-3 py-2 bg-apple-accent text-white text-xs font-medium rounded-lg hover:opacity-90"
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {allStores.map((store) => {
+                        const assigned = (userStoreAssignments[user.email] ?? user.storeIds ?? ["default"]).includes(store.id);
+                        return (
+                          <label
+                            key={store.id}
+                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${
+                              assigned
+                                ? "border-apple-accent bg-apple-accent/10 text-apple-accent"
+                                : "border-apple-border bg-apple-surface text-apple-text2 hover:bg-apple-bg"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={assigned}
+                              onChange={(e) => handleStoreAssignmentChange(user.email, store.id, e.target.checked)}
+                              className="sr-only"
+                            />
+                            <span>{store.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Generar pedido + Mi inventario */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">

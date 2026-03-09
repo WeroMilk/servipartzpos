@@ -9,6 +9,7 @@ import { ToastProvider } from "@/components/Toast/ToastContext";
 import { notificationsService } from "@/lib/movements";
 import { storeStore } from "@/lib/storeStore";
 import { demoAuth } from "@/lib/demoAuth";
+import { localStores } from "@/lib/localStores";
 
 export default function DashboardLayout({
   children,
@@ -28,9 +29,15 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname === "/report" || pathname === "/inventario" || pathname?.startsWith("/admin");
-    // Vendedor (Gabriel): auto-asignar tienda default si no tiene, para evitar bucle con /stores restringido
+    // Vendedor (Gabriel): auto-asignar su tienda asignada si no tiene, para evitar bucle con /stores restringido
     if (demoAuth.isLimitedUser() && !storeStore.getStoreId()) {
-      storeStore.setStore("default", demoAuth.getCurrentUser()?.storeName ?? "Matriz");
+      const user = demoAuth.getCurrentUser();
+      const storeIds = user?.storeIds ?? ["default"];
+      const storeId = storeIds[0] ?? "default";
+      const stores = localStores.ensureDefault(user?.storeName ?? "Matriz");
+      const store = stores.find((s) => s.id === storeId);
+      const storeName = store?.name ?? (storeId === "default" ? user?.storeName ?? "Matriz" : storeId);
+      storeStore.setStore(storeId, storeName);
     }
     if (!skipStoreCheck && !storeStore.getStoreId()) {
       router.replace("/stores");

@@ -19,19 +19,21 @@ export default function LoginForm() {
     setLoading(true);
     setError("");
 
+    const fullEmail = email.includes("@") ? email.trim() : `${email.trim()}@servipartz.com`;
+
     try {
       if (useFirebase && auth) {
         try {
           // Usar Firebase real
           if (isLogin) {
-            await signInWithEmailAndPassword(auth, email, password);
+            await signInWithEmailAndPassword(auth, fullEmail, password);
           } else {
-            await createUserWithEmailAndPassword(auth, email, password);
+            await createUserWithEmailAndPassword(auth, fullEmail, password);
           }
         } catch (firebaseErr: any) {
           // Si Firebase Auth no está configurado (auth/configuration-not-found), usar demo
           if (firebaseErr?.code === "auth/configuration-not-found") {
-            await demoAuth.signIn(email, password);
+            await demoAuth.signIn(fullEmail, password);
           } else {
             throw firebaseErr;
           }
@@ -39,9 +41,9 @@ export default function LoginForm() {
       } else {
         // Usar modo demo
         if (isLogin) {
-          await demoAuth.signIn(email, password);
+          await demoAuth.signIn(fullEmail, password);
         } else {
-          await demoAuth.signUp(email, password);
+          await demoAuth.signUp(fullEmail, password);
         }
       }
       router.push("/stores");
@@ -87,19 +89,22 @@ export default function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="login-email" className="block text-sm font-medium text-apple-text mb-2">
-                Email
+                Usuario
               </label>
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-apple-surface2 border border-apple-border rounded-xl text-apple-text placeholder-apple-text2 focus:outline-none focus:ring-2 focus:ring-apple-accent focus:border-transparent transition-all"
-                placeholder="tu@email.com"
-              />
+              <div className="flex items-center gap-2 px-4 py-3 bg-apple-surface2 border border-apple-border rounded-xl focus-within:ring-2 focus-within:ring-apple-accent focus-within:border-transparent transition-all">
+                <input
+                  id="login-email"
+                  name="email"
+                  type="text"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="flex-1 min-w-0 bg-transparent text-apple-text placeholder-apple-text2 focus:outline-none"
+                  placeholder="gabriel"
+                />
+                <span className="text-apple-text2 text-sm shrink-0">@servipartz.com</span>
+              </div>
             </div>
 
             <div>
