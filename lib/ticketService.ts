@@ -90,7 +90,8 @@ export function buildTicketHtml(data: TicketData): string {
   }
   lines.push("========================================");
 
-  const text = lines.join("\n");
+  const escapedLines = lines.map((line) => line.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+  const linesHtml = escapedLines.map((line) => `<div class="ticket-line">${line}</div>`).join("\n");
 
   return `
 <!DOCTYPE html>
@@ -99,13 +100,13 @@ export function buildTicketHtml(data: TicketData): string {
   <meta charset="utf-8">
   <title>Ticket #${ticketNum}</title>
   <style>
-    body { font-family: monospace; font-size: 12px; padding: 16px; max-width: 320px; margin: 0 auto; }
-    pre { white-space: pre-wrap; word-wrap: break-word; margin: 0; }
+    body { font-family: monospace; font-size: 12px; padding: 16px; max-width: 320px; margin: 0 auto; text-align: center; }
+    .ticket-line { white-space: pre; word-wrap: break-word; margin: 0; text-align: center; }
     @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
-  <pre id="ticket-content">${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
+  <div id="ticket-content">${linesHtml}</div>
 </body>
 </html>`;
 }

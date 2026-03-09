@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package, Percent, DollarSign } from "lucide-react";
+import Link from "next/link";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package, Percent, DollarSign, Clock, AlertCircle } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
@@ -40,6 +41,25 @@ export default function CajaPage() {
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [discountPercent, setDiscountPercent] = useState<string>("");
   const [discountAmount, setDiscountAmount] = useState<string>("");
+  const [hasOpenShift, setHasOpenShift] = useState(false);
+
+  const checkShift = useCallback(() => {
+    if (storeId) {
+      setHasOpenShift(!!getCurrentShift(storeId));
+    } else {
+      setHasOpenShift(!!getCurrentShift("default"));
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    checkShift();
+  }, [checkShift]);
+
+  useEffect(() => {
+    const onFocus = () => checkShift();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [checkShift]);
 
   const refreshData = useCallback(() => {
     setBottles(loadInventoryFromStorage());
@@ -244,6 +264,13 @@ export default function CajaPage() {
     setTicketData(null);
   };
 
+  const handleCobrarClick = () => {
+    if (!hasOpenShift) {
+      return;
+    }
+    setShowPaymentModal(true);
+  };
+
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
       <div className="flex-shrink-0 px-4 pt-2 pb-1">
@@ -253,6 +280,23 @@ export default function CajaPage() {
         </h2>
         <p className="text-xs text-slate-500">Registra ventas en tiempo real</p>
       </div>
+
+      {!hasOpenShift && (
+        <div className="flex-shrink-0 mx-4 mt-2 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-800">Debes abrir un turno para registrar ventas</p>
+            <p className="text-xs text-amber-700 mt-0.5">Abre turno en Turnos para poder cobrar y hacer el corte al final del día.</p>
+          </div>
+          <Link
+            href="/turnos"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 shrink-0"
+          >
+            <Clock className="w-4 h-4" />
+            Abrir turno
+          </Link>
+        </div>
+      )}
 
       <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-2 p-2">
         {/* Lista de productos */}
@@ -400,7 +444,7 @@ export default function CajaPage() {
                     <input
                       type="text"
                       inputMode="decimal"
-                      placeholder="%"
+                      placeholder="0"
                       value={discountPercent}
                       onChange={(e) => {
                         setDiscountPercent(e.target.value);
@@ -414,7 +458,7 @@ export default function CajaPage() {
                     <input
                       type="text"
                       inputMode="decimal"
-                      placeholder="$"
+                      placeholder="0"
                       value={discountAmount}
                       onChange={(e) => {
                         setDiscountAmount(e.target.value);
@@ -458,12 +502,12 @@ export default function CajaPage() {
             </div>
             <button
               type="button"
-              onClick={() => setShowPaymentModal(true)}
-              disabled={cart.length === 0 || processing}
+              onClick={handleCobrarClick}
+              disabled={cart.length === 0 || processing || !hasOpenShift}
               className="w-full py-4 bg-emerald-600 text-white font-bold text-lg rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30"
             >
               {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : <ShoppingCart className="w-6 h-6" />}
-              Cobrar
+              {!hasOpenShift ? "Abre un turno para cobrar" : "Cobrar"}
             </button>
           </div>
         </div>

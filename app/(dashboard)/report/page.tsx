@@ -19,11 +19,46 @@ function toMonthString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Devuelve el domingo de la semana que contiene d */
+function getWeekStart(d: Date): Date {
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay());
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+/** Lista de semanas para los últimos 90 días. Cada item: { value: "YYYY-MM-DD" (domingo), label: "2 al 8 de marzo 2026" } */
+function getWeekOptions(): { value: string; label: string }[] {
+  const today = new Date();
+  const weeks: { value: string; label: string }[] = [];
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - 90);
+
+  let weekStart = getWeekStart(today);
+  while (weekStart >= cutoff) {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const value = toDateString(weekStart);
+    const monthYear = weekEnd.toLocaleDateString("es-MX", { month: "long", year: "numeric" }).replace(/^\w/, (c) => c.toUpperCase());
+    const label =
+      weekStart.getMonth() === weekEnd.getMonth()
+        ? `${weekStart.getDate()} al ${weekEnd.getDate()} de ${monthYear}`
+        : `${weekStart.getDate()} ${weekStart.toLocaleDateString("es-MX", { month: "short" })} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString("es-MX", { month: "short", year: "numeric" })}`;
+    weeks.push({ value, label });
+    weekStart.setDate(weekStart.getDate() - 7);
+  }
+  return weeks;
+}
+
 export default function ReportPage() {
   const today = new Date();
+  const weekOptions = getWeekOptions();
+  const defaultWeek = weekOptions[0]?.value ?? toDateString(getWeekStart(today));
+
   const [stats, setStats] = useState<SalesStats | null>(null);
   const [downloadPeriod, setDownloadPeriod] = useState<ReportPeriod>("day");
   const [selectedDate, setSelectedDate] = useState<string>(() => toDateString(today));
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => defaultWeek);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => toMonthString(today));
 
   const refDate =
@@ -32,7 +67,9 @@ export default function ReportPage() {
           const [y, m] = selectedMonth.split("-").map(Number);
           return new Date(y, m - 1, 1);
         })()
-      : new Date(selectedDate + "T12:00:00");
+      : downloadPeriod === "week"
+        ? new Date(selectedWeek + "T12:00:00")
+        : new Date(selectedDate + "T12:00:00");
 
   const periodStats = getSalesStatsForPeriod(downloadPeriod, refDate);
 
@@ -42,7 +79,7 @@ export default function ReportPage() {
 
   const handleDownload = () => {
     const text = buildReportTextForPeriod(downloadPeriod, periodStats);
-    const dateStr = downloadPeriod === "month" ? selectedMonth : selectedDate;
+    const dateStr = downloadPeriod === "month" ? selectedMonth : downloadPeriod === "week" ? selectedWeek : selectedDate;
     const name = `reporte-ventas-${downloadPeriod}-${dateStr}.txt`;
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -191,6 +228,18 @@ export default function ReportPage() {
                 max={toMonthString(today)}
                 className="flex-1 px-3 py-2.5 text-sm bg-apple-surface border border-apple-border rounded-xl text-apple-text focus:outline-none focus:ring-2 focus:ring-apple-accent"
               />
+            ) : downloadPeriod === "week" ? (
+              <select
+                value={selectedWeek}
+                onChange={(e) => setSelectedWeek(e.target.value)}
+                className="flex-1 px-3 py-2.5 text-sm bg-apple-surface border border-apple-border rounded-xl text-apple-text focus:outline-none focus:ring-2 focus:ring-apple-accent"
+              >
+                {weekOptions.map((w) => (
+                  <option key={w.value} value={w.value}>
+                    {w.label}
+                  </option>
+                ))}
+              </select>
             ) : (
               <input
                 type="date"
