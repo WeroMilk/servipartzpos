@@ -28,20 +28,20 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Servipartz - Punto de Venta",
+  title: "Servipartz | Punto de Venta",
   description: "Control de inventario y ventas multi-tienda",
   icons: { icon: "/favicon.png", shortcut: "/favicon.png", apple: "/favicon.png" },
   manifest: "/manifest.webmanifest",
   other: { "mobile-web-app-capable": "yes" },
   openGraph: {
-    title: "Servipartz - Punto de Venta",
+    title: "Servipartz | Punto de Venta",
     description: "Control de inventario y ventas multi-tienda",
     images: ["/og-image.png"],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Servipartz - Punto de Venta",
+    title: "Servipartz | Punto de Venta",
     description: "Control de inventario y ventas multi-tienda",
     images: ["/og-image.png"],
   },
