@@ -3,6 +3,8 @@
  * Se alimenta desde la Caja al registrar ventas.
  */
 
+import { getSalesByShift } from "./salesRegistry";
+
 const SALES_HISTORY_KEY = "mibarra-sales-history";
 const MAX_DAYS = 90;
 
@@ -278,6 +280,43 @@ export function getSalesStatsForPeriod(
   return { total, totalRevenue, label, topProducts, detailLines };
 }
 
+/** Devuelve estadísticas de ventas para un turno (para usuario limitado) */
+export function getSalesStatsForShift(shiftId: string): SalesStatsForPeriod {
+  const sales = getSalesByShift(shiftId);
+  let total = 0;
+  let totalRevenue = 0;
+  const byProduct: Record<string, { quantity: number; unit: string; revenue: number }> = {};
+  const detailLines: DetailLine[] = [];
+
+  for (const sale of sales) {
+    totalRevenue += sale.total;
+    for (const item of sale.items) {
+      const price = item.price ?? 0;
+      const subtotal = price * item.quantity;
+      total += item.quantity;
+      if (!byProduct[item.name]) byProduct[item.name] = { quantity: 0, unit: "unid", revenue: 0 };
+      byProduct[item.name].quantity += item.quantity;
+      byProduct[item.name].revenue += subtotal;
+      if (price > 0) {
+        detailLines.push({ name: item.name, quantity: item.quantity, price, subtotal });
+      }
+    }
+  }
+
+  const topProducts = Object.entries(byProduct)
+    .map(([name, { quantity, unit, revenue }]) => ({ name, quantity, unit, revenue: revenue > 0 ? revenue : undefined }))
+    .sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0) || b.quantity - a.quantity)
+    .slice(0, 10);
+
+  return {
+    total,
+    totalRevenue,
+    label: "Turno actual",
+    topProducts,
+    detailLines,
+  };
+}
+
 /** Genera texto para descargar como .txt (resumen de todos los períodos) */
 export function buildReportText(stats: SalesStats): string {
   const lines: string[] = [
@@ -301,6 +340,11 @@ export function buildReportText(stats: SalesStats): string {
     "--- Servipartz ---",
   ];
   return lines.join("\n");
+}
+
+/** Genera texto del reporte para turno actual */
+export function buildReportTextForShift(shiftStats: SalesStatsForPeriod): string {
+  return buildReportTextForPeriod("day" as ReportPeriod, shiftStats);
 }
 
 /** Genera texto del reporte detallado para un período (día, semana o mes) */
@@ -367,6 +411,26 @@ function buildReportHtml(text: string, title: string): string {
   <pre id="report-content">${escaped}</pre>
 </body>
 </html>`;
+}
+
+/** Imprime el reporte de ventas del turno actual */
+export function printReportForShift(shiftId: string): void {
+  const periodStats = getSalesStatsForShift(shiftId);
+  const text = buildReportTextForShift(periodStats);
+  const title = `Reporte ventas - ${periodStats.label}`;
+  const html = buildReportHtml(text, title);
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("Permite ventanas emergentes para imprimir el reporte");
+    return;
+  }
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 250);
 }
 
 /** Imprime el reporte de ventas por período (igual que los tickets) */

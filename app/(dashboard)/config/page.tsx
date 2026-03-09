@@ -261,51 +261,51 @@ export default function ConfigPage() {
           </div>
 
           {/* Backup / Exportación - oculto en móvil */}
-          <section className="hidden md:flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
-            <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
+          <section className="hidden md:block w-full bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm">
+            <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
               <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
                 <Database className="w-4 h-4 text-apple-accent" aria-hidden />
               </div>
               <div className="min-w-0">
                 <h2 className="text-sm sm:text-base font-semibold text-apple-text">Backup / Exportación</h2>
-                <p className="text-xs sm:text-sm text-apple-text2 break-words">Exporta inventario, ventas, movimientos o todo.</p>
+                <p className="text-xs sm:text-sm text-apple-text2">Exporta inventario, ventas, movimientos o todo.</p>
               </div>
             </div>
-            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 -mb-2">
+            <div className="p-3 sm:p-4 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => handleExport("inventory")}
                 disabled={exporting !== null}
-                className="flex items-center justify-center gap-2 px-3 py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 min-w-0 px-3 py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
               >
-                {exporting === "inventory" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileJson className="w-4 h-4" />}
+                {exporting === "inventory" ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <FileJson className="w-4 h-4 shrink-0" />}
                 Exportar inventario
               </button>
               <button
                 type="button"
                 onClick={() => handleExport("sales")}
                 disabled={exporting !== null}
-                className="flex items-center justify-center gap-2 px-3 py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 min-w-0 px-3 py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
               >
-                {exporting === "sales" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileJson className="w-4 h-4" />}
+                {exporting === "sales" ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <FileJson className="w-4 h-4 shrink-0" />}
                 Exportar ventas
               </button>
               <button
                 type="button"
                 onClick={() => handleExport("movements")}
                 disabled={exporting !== null}
-                className="flex items-center justify-center gap-2 px-3 py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 min-w-0 px-3 py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
               >
-                {exporting === "movements" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileJson className="w-4 h-4" />}
+                {exporting === "movements" ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <FileJson className="w-4 h-4 shrink-0" />}
                 Exportar movimientos
               </button>
               <button
                 type="button"
                 onClick={() => handleExport("all")}
                 disabled={exporting !== null}
-                className="flex items-center justify-center gap-2 px-3 py-3 bg-apple-accent text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 sm:col-span-2 lg:col-span-1"
+                className="flex items-center justify-center gap-2 min-w-0 px-3 py-3 bg-apple-accent text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50"
               >
-                {exporting === "all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {exporting === "all" ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Download className="w-4 h-4 shrink-0" />}
                 Exportar todo
               </button>
             </div>

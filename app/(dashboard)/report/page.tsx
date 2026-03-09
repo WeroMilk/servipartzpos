@@ -1,15 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Printer, TrendingUp, Calendar } from "lucide-react";
+import Link from "next/link";
+import { Download, Printer, TrendingUp, Calendar, Clock } from "lucide-react";
 import {
   getSalesStats,
   getSalesStatsForPeriod,
+  getSalesStatsForShift,
   buildReportTextForPeriod,
+  buildReportTextForShift,
   printReportForPeriod,
+  printReportForShift,
   type SalesStats,
   type ReportPeriod,
 } from "@/lib/salesReport";
+import { demoAuth } from "@/lib/demoAuth";
+import { storeStore } from "@/lib/storeStore";
+import { getCurrentShift } from "@/lib/shiftService";
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -51,6 +58,11 @@ function getWeekOptions(): { value: string; label: string }[] {
 }
 
 export default function ReportPage() {
+  const isLimited = demoAuth.isLimitedUser();
+  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const currentShift = storeId ? getCurrentShift(storeId) : null;
+  const shiftStats = currentShift ? getSalesStatsForShift(currentShift.id) : null;
+
   const today = new Date();
   const weekOptions = getWeekOptions();
   const defaultWeek = weekOptions[0]?.value ?? toDateString(getWeekStart(today));
@@ -91,6 +103,105 @@ export default function ReportPage() {
   };
 
   const handlePrint = () => printReportForPeriod(downloadPeriod, refDate);
+
+  // Usuario limitado (Gabriel): solo reporte de turno actual
+  if (isLimited) {
+    if (!currentShift) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center p-4 gap-4">
+          <Clock className="w-12 h-12 text-slate-300" />
+          <p className="text-apple-text2 text-sm text-center">Abre un turno para ver el reporte de ventas de tu turno actual.</p>
+          <Link href="/turnos" className="px-4 py-2 bg-apple-accent text-white text-sm font-medium rounded-xl hover:opacity-90">
+            Ir a Turnos
+          </Link>
+        </div>
+      );
+    }
+    const ps = shiftStats!;
+    return (
+      <div className="h-full min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-shrink-0 px-4 pt-2 pb-1">
+          <h2 className="text-lg font-semibold text-apple-text">Reporte de ventas</h2>
+          <p className="text-xs text-apple-text2">Ventas de tu turno actual</p>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 gap-3 flex flex-col">
+          <div className="bg-apple-surface rounded-2xl border border-apple-border p-4 text-center">
+            <p className="text-xs text-apple-text2 uppercase">Total del turno</p>
+            <p className="text-2xl font-bold text-apple-accent mt-1">
+              ${ps.totalRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col bg-apple-surface rounded-2xl border border-apple-border overflow-hidden">
+            <div className="flex-shrink-0 flex items-center gap-2 p-3 border-b border-apple-border/50">
+              <TrendingUp className="w-4 h-4 text-apple-accent" />
+              <h3 className="font-semibold text-apple-text text-sm">Lo más vendido</h3>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3">
+              {ps.topProducts.length === 0 ? (
+                <p className="text-xs text-apple-text2 text-center py-4">Sin ventas en este turno</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {ps.topProducts.map((p, i) => (
+                    <li key={`${p.name}-${i}`} className="flex justify-between gap-2 text-xs py-1 border-b border-apple-border/40 last:border-0">
+                      <span className="font-medium text-apple-text truncate">{p.name}</span>
+                      <span className="text-apple-accent font-semibold shrink-0">
+                        {p.quantity} {p.unit}
+                        {p.revenue != null && <span className="text-apple-text2 font-normal ml-1">${p.revenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          {ps.detailLines.length > 0 && (
+            <div className="flex flex-col bg-apple-surface rounded-2xl border border-apple-border overflow-hidden max-h-48">
+              <div className="p-3 border-b border-apple-border/50">
+                <h3 className="font-semibold text-apple-text text-sm">Detalle de ventas</h3>
+              </div>
+              <div className="overflow-y-auto p-3">
+                <ul className="space-y-2 text-xs">
+                  {ps.detailLines.map((d, i) => (
+                    <li key={`${d.name}-${i}`} className="border-b border-apple-border/40 pb-2 last:border-0">
+                      <p className="font-medium text-apple-text">{d.name}</p>
+                      <p className="text-apple-text2 mt-0.5">{d.quantity} × ${d.price.toFixed(2)} = <span className="font-semibold text-apple-accent">${d.subtotal.toFixed(2)}</span></p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const text = buildReportTextForShift(ps);
+                const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `reporte-turno-${new Date().toISOString().slice(0, 10)}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-apple-accent text-white text-sm font-medium rounded-xl hover:opacity-90"
+            >
+              <Download className="w-4 h-4" />
+              Descargar
+            </button>
+            <button
+              type="button"
+              onClick={() => printReportForShift(currentShift.id)}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-apple-surface border border-apple-border text-apple-text text-sm font-medium rounded-xl hover:bg-apple-bg"
+            >
+              <Printer className="w-4 h-4" />
+              Imprimir
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!stats) {
     return (

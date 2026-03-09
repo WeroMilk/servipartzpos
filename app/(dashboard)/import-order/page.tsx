@@ -93,7 +93,7 @@ export default function ImportOrderPage() {
         minute: "2-digit",
       });
       setLastInventoryUpdate(dateStr);
-      setLastInventoryComplete();
+      setLastInventoryComplete("general");
 
       movementsService.add({
         type: "order_import",

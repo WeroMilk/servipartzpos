@@ -8,6 +8,7 @@ import DashboardFooter from "@/components/Dashboard/DashboardFooter";
 import { ToastProvider } from "@/components/Toast/ToastContext";
 import { notificationsService } from "@/lib/movements";
 import { storeStore } from "@/lib/storeStore";
+import { demoAuth } from "@/lib/demoAuth";
 
 export default function DashboardLayout({
   children,
@@ -29,6 +30,24 @@ export default function DashboardLayout({
     const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname === "/report" || pathname === "/inventario" || pathname?.startsWith("/admin");
     if (!skipStoreCheck && !storeStore.getStoreId()) {
       router.replace("/stores");
+    }
+  }, [pathname, router]);
+
+  // Usuario limitado (Gabriel): solo caja, turnos y reporte
+  const restrictedForLimited = [
+    "/inventario",
+    "/movements",
+    "/devoluciones",
+    "/import-order",
+    "/config",
+    "/cfdi",
+    "/admin",
+    "/stores",
+    "/select-bottles",
+  ];
+  useEffect(() => {
+    if (demoAuth.isLimitedUser() && pathname && restrictedForLimited.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+      router.replace("/caja");
     }
   }, [pathname, router]);
 

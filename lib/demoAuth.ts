@@ -96,6 +96,22 @@ export const demoAuth = {
     return demoAuth.getCurrentUser() !== null;
   },
 
+  /** Usuario limitado (Gabriel): solo turnos, caja y reporte de su turno actual */
+  isLimitedUser: (): boolean => {
+    const user = demoAuth.getCurrentUser();
+    if (!user) return false;
+    const email = (user.email || "").toLowerCase();
+    return email === "gabriel@servipartz.com";
+  },
+
+  /** Usuario admin (Piti): acceso completo con su clave */
+  isAdminUser: (): boolean => {
+    const user = demoAuth.getCurrentUser();
+    if (!user) return false;
+    const email = (user.email || "").toLowerCase();
+    return email === "zavala@servipartz.com";
+  },
+
   updateStoreName: (storeName: string): void => {
     const user = demoAuth.getCurrentUser();
     if (user) {

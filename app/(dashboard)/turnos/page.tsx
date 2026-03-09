@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { employeeAuth } from "@/lib/employeeAuth";
 import {
@@ -19,6 +20,8 @@ export default function TurnosPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
   const refreshShift = () => {
     if (storeId) {
@@ -33,23 +36,27 @@ export default function TurnosPage() {
   const employees = employeeAuth.getEmployees();
   const effectiveEmployeeId = selectedEmployeeId || employees[0]?.id || "";
 
-  const handleOpenShift = () => {
+  const handleOpenShiftClick = () => {
     const amount = parseFloat(initialCash.replace(",", ".")) || 0;
     if (amount < 0) {
       setError("El monto inicial debe ser mayor o igual a 0");
       return;
     }
-    const confirmed = window.confirm(
-      `¿Confirmas que el fondo inicial de efectivo es $${amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}?`
-    );
-    if (!confirmed) return;
+    setPendingAmount(amount);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmOpenShift = () => {
+    if (pendingAmount == null) return;
     const emp = employees.find((e) => e.id === effectiveEmployeeId);
     const employeeName = emp?.label ?? "Cajero";
     const employeeId = effectiveEmployeeId || "default";
+    setShowConfirmModal(false);
+    setPendingAmount(null);
     setLoading(true);
     setError("");
     try {
-      openShift(storeId ?? "default", employeeId, employeeName, amount);
+      openShift(storeId ?? "default", employeeId, employeeName, pendingAmount);
       setInitialCash("");
       refreshShift();
     } catch (e) {
@@ -180,7 +187,7 @@ export default function TurnosPage() {
 
             <button
               type="button"
-              onClick={handleOpenShift}
+              onClick={handleOpenShiftClick}
               disabled={loading}
               className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -189,6 +196,70 @@ export default function TurnosPage() {
             </button>
           </div>
         )}
+
+        <AnimatePresence>
+          {showConfirmModal && pendingAmount != null && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onClick={() => {
+                setShowConfirmModal(false);
+                setPendingAmount(null);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Confirmar fondo inicial</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setPendingAmount(null);
+                    }}
+                    className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Cerrar"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-slate-600 mb-6">
+                  ¿Confirmas que el fondo inicial de efectivo es{" "}
+                  <span className="font-bold text-slate-900">
+                    ${pendingAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                  </span>
+                  ?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setPendingAmount(null);
+                    }}
+                    className="flex-1 py-3 px-4 bg-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmOpenShift}
+                    className="flex-1 py-3 px-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700"
+                  >
+                    Aceptar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <h3 className="font-medium text-slate-700 text-sm mb-2">Historial reciente</h3>

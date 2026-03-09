@@ -26,6 +26,9 @@ const NAV_ITEMS = [
   { href: "/config", icon: Settings, label: "Configuraciones" },
 ] as const;
 
+/** Solo Caja, Turnos y Reporte para usuario limitado (Gabriel) */
+const LIMITED_NAV_HREFS = new Set(["/caja", "/report", "/turnos"]);
+
 const ADMIN_NAV = { href: "/admin", icon: BarChart3, label: "Panel gerente" };
 const STORES_NAV = { href: "/stores", icon: Store, label: "Gestión de tiendas" };
 
@@ -92,7 +95,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
               <POS_NAV.icon className="w-5 h-5 flex-shrink-0" />
               <span>{POS_NAV.label}</span>
             </Link>
-            {demoAuth.getCurrentUser()?.role === "admin" && (
+            {demoAuth.getCurrentUser()?.role === "admin" && !demoAuth.isLimitedUser() && (
               <>
                 <Link
                   href={STORES_NAV.href}
@@ -112,7 +115,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                 </Link>
               </>
             )}
-            {NAV_ITEMS.map(({ href, icon: Icon, label }) => (
+            {(demoAuth.isLimitedUser() ? NAV_ITEMS.filter((i) => LIMITED_NAV_HREFS.has(i.href)) : NAV_ITEMS).map(({ href, icon: Icon, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -201,7 +204,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                       <span className="font-semibold text-[16px]">{POS_NAV.label}</span>
                     </Link>
                   </li>
-                  {demoAuth.getCurrentUser()?.role === "admin" && (
+                  {demoAuth.getCurrentUser()?.role === "admin" && !demoAuth.isLimitedUser() && (
                     <>
                       <li>
                         <Link
@@ -233,7 +236,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                       </li>
                     </>
                   )}
-                  {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+                  {(demoAuth.isLimitedUser() ? NAV_ITEMS.filter((i) => LIMITED_NAV_HREFS.has(i.href)) : NAV_ITEMS).map(({ href, icon: Icon, label }) => {
                     const isActive = pathname === href;
                     return (
                       <li key={href}>

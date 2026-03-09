@@ -118,6 +118,14 @@ export default function InventarioPage() {
     inventoryCompletedRef.current = true;
     setInventoryActive(false);
     setInventoryReviewedIds(new Set());
+    const isGeneral = selectedCategory === "todos";
+    const areaName = isGeneral
+      ? undefined
+      : categories.find((c) => c.id === selectedCategory)?.name ?? selectedCategory;
+    const inventoryType = isGeneral ? "general" : "parcial";
+    const descriptionText = isGeneral
+      ? "Se hizo inventario general"
+      : `Se hizo inventario parcial "${areaName}"`;
     const runConfetti = () => {
       const count = 200;
       const defaults = { origin: { y: 0.6 }, zIndex: 9999 };
@@ -137,11 +145,11 @@ export default function InventarioPage() {
       bottleName: "Inventario",
       newValue: total,
       userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
-      description: `Inventario completo: ${total} productos revisados`,
+      description: descriptionText,
     });
     notificationsService.incrementUnread();
-    setLastInventoryComplete();
-  }, [inventoryActive, inventoryReviewedIds, displayBottles]);
+    setLastInventoryComplete(inventoryType, areaName);
+  }, [inventoryActive, inventoryReviewedIds, displayBottles, selectedCategory]);
 
 
   useEffect(() => {
