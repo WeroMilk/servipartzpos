@@ -150,7 +150,8 @@ export async function addSale(
   items: SaleItem[],
   total: number,
   employeeId?: string,
-  employeeName?: string
+  employeeName?: string,
+  options?: { paymentMethod?: "efectivo" | "tarjeta" | "transferencia"; amountReceived?: number; change?: number; ticketNumber?: number }
 ): Promise<string> {
   if (!db || !useFirebase) throw new Error("Firebase no configurado");
   const ref = collection(db, "stores", storeId, "sales");
@@ -160,6 +161,10 @@ export async function addSale(
     timestamp: Timestamp.now(),
     employeeId: employeeId ?? null,
     employeeName: employeeName ?? null,
+    paymentMethod: options?.paymentMethod ?? null,
+    amountReceived: options?.amountReceived ?? null,
+    change: options?.change ?? null,
+    ticketNumber: options?.ticketNumber ?? null,
   });
   return docRef.id;
 }
@@ -183,6 +188,10 @@ export async function getStoreSales(storeId: string, maxDays = 90): Promise<Sale
       timestamp: ts,
       employeeId: data.employeeId,
       employeeName: data.employeeName,
+      paymentMethod: data.paymentMethod,
+      amountReceived: data.amountReceived,
+      change: data.change,
+      ticketNumber: data.ticketNumber,
     });
   }
   return sales;

@@ -21,6 +21,7 @@ function productToBottle(p: { id: string; name: string; category: string; sku?: 
     currentOz: 0,
     sizeUnits: capacity,
     currentUnits: stock,
+    price: p.price ?? 0,
   };
 }
 

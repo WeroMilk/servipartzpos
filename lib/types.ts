@@ -35,6 +35,8 @@ export interface SaleItem {
   price?: number;
 }
 
+export type PaymentMethod = "efectivo" | "tarjeta" | "transferencia";
+
 /** Venta registrada */
 export interface Sale {
   id: string;
@@ -43,6 +45,10 @@ export interface Sale {
   timestamp: Date;
   employeeId?: string;
   employeeName?: string;
+  paymentMethod?: PaymentMethod;
+  amountReceived?: number;
+  change?: number;
+  ticketNumber?: number;
 }
 
 /** Movimiento de inventario */
@@ -66,6 +72,7 @@ export interface Bottle {
   currentOz: number;
   sizeUnits?: number;
   currentUnits?: number;
+  price?: number;
   image?: string;
   brand?: string;
   type?: string;

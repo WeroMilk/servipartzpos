@@ -14,7 +14,15 @@ export function loadBarBottles(): Bottle[] {
     const saved = localStorage.getItem(BAR_BOTTLES_KEY);
     if (saved) {
       const parsed = JSON.parse(saved) as Bottle[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Migración: añadir price si falta (bottles guardados antes de tener precios)
+        const withPrices = parsed.map((b) => {
+          if (b.price != null && b.price > 0) return b;
+          const def = defaultBottles.find((d) => d.id === b.id);
+          return { ...b, price: def?.price ?? 0 };
+        });
+        return withPrices;
+      }
     }
     // Primera vez: cargar inventario demo con todos los productos
     saveBarBottles(defaultBottles);

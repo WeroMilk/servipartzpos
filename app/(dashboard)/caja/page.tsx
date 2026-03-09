@@ -10,8 +10,12 @@ import { getStoreProducts, addSale, updateProductStock, addMovement } from "@/li
 import { movementsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
 import { demoAuth } from "@/lib/demoAuth";
+import { getNextTicketNumber } from "@/lib/ticketCounter";
+import PaymentModal from "@/components/Caja/PaymentModal";
+import TicketPreview from "@/components/Caja/TicketPreview";
 import type { Bottle } from "@/lib/types";
 import type { SaleItem } from "@/lib/types";
+import type { TicketData } from "@/lib/ticketService";
 
 interface CartItem {
   id: string;
@@ -28,6 +32,8 @@ export default function CajaPage() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [ticketData, setTicketData] = useState<TicketData | null>(null);
 
   const isDefaultStore = storeId === "default";
 
@@ -53,7 +59,7 @@ export default function CajaPage() {
         const stock = useUnits
           ? (b.currentUnits ?? 0)
           : Math.floor((b.currentOz ?? 0) / 29.57);
-        return { id: b.id, name: b.name, stock, price: undefined };
+        return { id: b.id, name: b.name, stock, price: b.price ?? 0 };
       })
     : products;
 
@@ -93,17 +99,24 @@ export default function CajaPage() {
 
   const total = cart.reduce((acc, c) => acc + (c.price ?? 0) * c.quantity, 0);
 
-  const handleCobrar = async () => {
+  const processSaleWithPayment = async (payment: {
+    method: "efectivo" | "tarjeta" | "transferencia";
+    amountReceived?: number;
+    change?: number;
+  }) => {
     if (cart.length === 0) return;
+    setShowPaymentModal(false);
     setProcessing(true);
-    try {
-      const saleItems: SaleItem[] = cart.map((c) => ({
-        productId: c.id,
-        name: c.name,
-        quantity: c.quantity,
-        price: c.price,
-      }));
+    const saleItems: SaleItem[] = cart.map((c) => ({
+      productId: c.id,
+      name: c.name,
+      quantity: c.quantity,
+      price: c.price,
+    }));
+    const ticketNumber = getNextTicketNumber(storeId ?? "default");
+    const saleDate = new Date();
 
+    try {
       if (isDefaultStore) {
         const currentBottles = loadBarBottles();
         const applied = cart.map((c) => {
@@ -128,7 +141,7 @@ export default function CajaPage() {
           }
         }).filter(Boolean) as { bottleName: string; deducted: number; unit: "oz" | "units" }[];
         saveBarBottles(currentBottles);
-        addSalesFromImport(applied, new Date());
+        addSalesFromImport(applied, saleDate);
         applied.forEach((a) => {
           movementsService.add({
             type: "sales_import",
@@ -145,7 +158,13 @@ export default function CajaPage() {
           saleItems,
           total,
           undefined,
-          demoAuth.getCurrentUser()?.name
+          demoAuth.getCurrentUser()?.name,
+          {
+            paymentMethod: payment.method,
+            amountReceived: payment.amountReceived,
+            change: payment.change,
+            ticketNumber,
+          }
         );
         for (const c of cart) {
           const prod = products.find((p) => p.id === c.id);
@@ -163,6 +182,17 @@ export default function CajaPage() {
           }
         }
       }
+
+      setTicketData({
+        items: saleItems,
+        total,
+        ticketNumber,
+        employeeName: demoAuth.getCurrentUser()?.name,
+        paymentMethod: payment.method,
+        amountReceived: payment.amountReceived,
+        change: payment.change,
+        date: saleDate,
+      });
       setCart([]);
     } catch (e) {
       console.error(e);
@@ -171,6 +201,10 @@ export default function CajaPage() {
       setProcessing(false);
       loadInventory();
     }
+  };
+
+  const handleNewSale = () => {
+    setTicketData(null);
   };
 
   return (
@@ -301,7 +335,7 @@ export default function CajaPage() {
             </div>
             <button
               type="button"
-              onClick={handleCobrar}
+              onClick={() => setShowPaymentModal(true)}
               disabled={cart.length === 0 || processing}
               className="w-full py-4 bg-emerald-600 text-white font-bold text-lg rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30"
             >
@@ -311,6 +345,21 @@ export default function CajaPage() {
           </div>
         </div>
       </div>
+
+      {showPaymentModal && (
+        <PaymentModal
+          total={total}
+          onConfirm={processSaleWithPayment}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
+
+      {ticketData && (
+        <TicketPreview
+          data={ticketData}
+          onNewSale={handleNewSale}
+        />
+      )}
     </div>
   );
 }

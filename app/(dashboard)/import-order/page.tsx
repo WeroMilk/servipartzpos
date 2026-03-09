@@ -129,7 +129,8 @@ export default function ImportOrderPage() {
 
   return (
     <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
-      <div className="max-w-lg mx-auto px-4 py-6 pb-[env(safe-area-inset-bottom,0px)] space-y-6">
+      <div className="min-h-full flex flex-col justify-center px-4 py-6 pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="max-w-lg mx-auto w-full space-y-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-apple-surface border border-apple-border">
             <Package className="w-8 h-8 text-apple-accent" />
@@ -192,6 +193,7 @@ export default function ImportOrderPage() {
           <p className="text-xs text-apple-text">
             La plantilla tiene las columnas <strong>Producto</strong> y <strong>Cantidad</strong>. Escribe el nombre del repuesto exactamente como aparece en tu inventario.
           </p>
+        </div>
         </div>
       </div>
     </div>
