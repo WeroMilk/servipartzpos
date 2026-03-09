@@ -14,7 +14,7 @@ export interface Employee {
 /** Valores por defecto (id, label y contraseña inicial). */
 export const EMPLOYEES: Employee[] = [
   { id: "Gerente", label: "Piti", password: "gerente123" },
-  { id: "001", label: "Gabriel (ID 001)", password: "empleado001" },
+  { id: "001", label: "Gabriel", password: "empleado001" },
   { id: "002", label: "Alfonso", password: "empleado002" },
 ];
 
