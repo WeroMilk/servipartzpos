@@ -122,7 +122,7 @@ export default function MovementsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="px-4 pt-2 pb-1 flex-shrink-0 md:pt-2 md:pb-1 flex items-center justify-between gap-2">
+        <div className="px-4 pt-2 pb-4 flex-shrink-0 md:pt-2 md:pb-5 flex items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold text-apple-text">Movimientos</h2>
             <p className="text-xs text-apple-text2">Historial de cambios en el inventario</p>
@@ -138,7 +138,7 @@ export default function MovementsPage() {
           )}
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-1 md:pb-2" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-1 md:pt-3 md:pb-2" style={{ WebkitOverflowScrolling: "touch" }}>
           {movements.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
               <p className="text-apple-text2 mb-2">No hay movimientos registrados</p>

@@ -103,10 +103,9 @@ function isSameDay(d: Date, ref: Date): boolean {
   return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate();
 }
 
-/** Devuelve si d está en la misma semana que ref (domingo a sábado) */
+/** Devuelve si d está en la misma semana que ref. La semana es ref (inicio) + 6 días = 7 días totales */
 function isSameWeek(d: Date, ref: Date): boolean {
   const start = new Date(ref);
-  start.setDate(ref.getDate() - ref.getDay());
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
@@ -221,7 +220,7 @@ function formatPeriodLabel(period: ReportPeriod, referenceDate: Date): string {
   }
   if (period === "week") {
     const start = new Date(referenceDate);
-    start.setDate(referenceDate.getDate() - referenceDate.getDay());
+    start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     return `${start.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit" })} - ${end.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}`;

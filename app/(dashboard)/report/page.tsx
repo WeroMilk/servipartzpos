@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Download, Printer, TrendingUp, Calendar, Clock } from "lucide-react";
+import { Download, Printer, TrendingUp, Clock, ChevronDown } from "lucide-react";
 import {
   getSalesStats,
   getSalesStatsForPeriod,
@@ -17,6 +17,7 @@ import {
 import { demoAuth } from "@/lib/demoAuth";
 import { storeStore } from "@/lib/storeStore";
 import { getCurrentShift } from "@/lib/shiftService";
+import { CalendarPicker } from "@/components/Report/CalendarPicker";
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -26,35 +27,18 @@ function toMonthString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Devuelve el domingo de la semana que contiene d */
-function getWeekStart(d: Date): Date {
-  const start = new Date(d);
-  start.setDate(d.getDate() - d.getDay());
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
-
-/** Lista de semanas para los últimos 90 días. Cada item: { value: "YYYY-MM-DD" (domingo), label: "2 al 8 de marzo 2026" } */
-function getWeekOptions(): { value: string; label: string }[] {
-  const today = new Date();
-  const weeks: { value: string; label: string }[] = [];
-  const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() - 90);
-
-  let weekStart = getWeekStart(today);
-  while (weekStart >= cutoff) {
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    const value = toDateString(weekStart);
-    const monthYear = weekEnd.toLocaleDateString("es-MX", { month: "long", year: "numeric" }).replace(/^\w/, (c) => c.toUpperCase());
-    const label =
-      weekStart.getMonth() === weekEnd.getMonth()
-        ? `${weekStart.getDate()} al ${weekEnd.getDate()} de ${monthYear}`
-        : `${weekStart.getDate()} ${weekStart.toLocaleDateString("es-MX", { month: "short" })} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString("es-MX", { month: "short", year: "numeric" })}`;
-    weeks.push({ value, label });
-    weekStart.setDate(weekStart.getDate() - 7);
+function formatPeriodLabelShort(period: ReportPeriod, refDate: Date): string {
+  if (period === "day") {
+    return refDate.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
   }
-  return weeks;
+  if (period === "week") {
+    const start = new Date(refDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return `${start.getDate()}-${end.getDate()} ${start.toLocaleDateString("es-MX", { month: "short" })}`;
+  }
+  return refDate.toLocaleDateString("es-MX", { month: "long", year: "numeric" }).replace(/^\w/, (c) => c.toUpperCase());
 }
 
 export default function ReportPage() {
@@ -64,35 +48,23 @@ export default function ReportPage() {
   const shiftStats = currentShift ? getSalesStatsForShift(currentShift.id) : null;
 
   const today = new Date();
-  const weekOptions = getWeekOptions();
-  const defaultWeek = weekOptions[0]?.value ?? toDateString(getWeekStart(today));
+  today.setHours(23, 59, 59, 999);
 
   const [stats, setStats] = useState<SalesStats | null>(null);
-  const [downloadPeriod, setDownloadPeriod] = useState<ReportPeriod>("day");
-  const [selectedDate, setSelectedDate] = useState<string>(() => toDateString(today));
-  const [selectedWeek, setSelectedWeek] = useState<string>(() => defaultWeek);
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => toMonthString(today));
+  const [period, setPeriod] = useState<ReportPeriod>("day");
+  const [refDate, setRefDate] = useState<Date>(() => new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const refDate =
-    downloadPeriod === "month"
-      ? (() => {
-          const [y, m] = selectedMonth.split("-").map(Number);
-          return new Date(y, m - 1, 1);
-        })()
-      : downloadPeriod === "week"
-        ? new Date(selectedWeek + "T12:00:00")
-        : new Date(selectedDate + "T12:00:00");
-
-  const periodStats = getSalesStatsForPeriod(downloadPeriod, refDate);
+  const periodStats = getSalesStatsForPeriod(period, refDate);
 
   useEffect(() => {
     setStats(getSalesStats());
   }, []);
 
   const handleDownload = () => {
-    const text = buildReportTextForPeriod(downloadPeriod, periodStats);
-    const dateStr = downloadPeriod === "month" ? selectedMonth : downloadPeriod === "week" ? selectedWeek : selectedDate;
-    const name = `reporte-ventas-${downloadPeriod}-${dateStr}.txt`;
+    const text = buildReportTextForPeriod(period, periodStats);
+    const dateStr = period === "month" ? toMonthString(refDate) : toDateString(refDate);
+    const name = `reporte-ventas-${period}-${dateStr}.txt`;
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -102,7 +74,7 @@ export default function ReportPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = () => printReportForPeriod(downloadPeriod, refDate);
+  const handlePrint = () => printReportForPeriod(period, refDate);
 
   // Usuario limitado (Gabriel): solo reporte de turno actual
   if (isLimited) {
@@ -222,30 +194,55 @@ export default function ReportPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col p-4 gap-3 w-full" style={{ WebkitOverflowScrolling: "touch" }}>
-        {/* Períodos: Hoy, Semana, Mes (ingresos en $) */}
+        {/* Selectores de período: Día, Semana, Mes - clickeables, abren calendario */}
         <div className="grid grid-cols-3 gap-2 flex-shrink-0">
-          <div className="bg-apple-surface rounded-2xl border border-apple-border p-3 text-center">
-            <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide">{stats.dayLabel}</p>
-            <p className="text-lg sm:text-xl font-semibold text-apple-accent mt-0.5">
-              ${stats.dayRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-apple-text2">ingresos</p>
-          </div>
-          <div className="bg-apple-surface rounded-2xl border border-apple-border p-3 text-center">
-            <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide">{stats.weekLabel}</p>
-            <p className="text-lg sm:text-xl font-semibold text-apple-accent mt-0.5">
-              ${stats.weekRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-apple-text2">ingresos</p>
-          </div>
-          <div className="bg-apple-surface rounded-2xl border border-apple-border p-3 text-center">
-            <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide">{stats.monthLabel}</p>
-            <p className="text-lg sm:text-xl font-semibold text-apple-accent mt-0.5">
-              ${stats.monthRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-apple-text2">ingresos</p>
-          </div>
+          {(["day", "week", "month"] as const).map((p) => {
+            const isActive = period === p;
+            const refForLabel = p === "month" ? new Date(refDate.getFullYear(), refDate.getMonth(), 1) : refDate;
+            const label = formatPeriodLabelShort(p, refForLabel);
+            const statsForBox = getSalesStatsForPeriod(p, refForLabel);
+            const revenue = statsForBox.totalRevenue;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => {
+                  setPeriod(p);
+                  setCalendarOpen(true);
+                }}
+                className={`relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-200 min-h-[72px] text-left w-full ${
+                  isActive
+                    ? "border-apple-accent bg-gradient-to-br from-apple-accent/10 to-primary-100/50 shadow-lg shadow-apple-accent/10"
+                    : "border-apple-border bg-apple-surface hover:border-apple-accent/50 hover:bg-apple-bg"
+                }`}
+              >
+                <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide font-medium">
+                  {p === "day" ? "Día" : p === "week" ? "Semana" : "Mes"}
+                </p>
+                <p className="text-xs sm:text-sm text-apple-text font-medium mt-0.5 truncate w-full text-center" title={label}>
+                  {label}
+                </p>
+                <p className="text-base sm:text-lg font-bold text-apple-accent mt-0.5">
+                  ${revenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-apple-text2">ingresos</p>
+                <ChevronDown className={`absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-apple-text2 transition-transform ${isActive ? "rotate-180" : ""}`} />
+              </button>
+            );
+          })}
         </div>
+
+        <CalendarPicker
+          period={period}
+          value={period === "month" ? new Date(refDate.getFullYear(), refDate.getMonth(), 1) : refDate}
+          maxDate={today}
+          onSelect={(d) => {
+            setRefDate(period === "month" ? new Date(d.getFullYear(), d.getMonth(), 1) : d);
+            setCalendarOpen(false);
+          }}
+          onClose={() => setCalendarOpen(false)}
+          isOpen={calendarOpen}
+        />
 
         {/* Lo más vendido (del período seleccionado) */}
         <div className="flex-1 min-h-0 flex flex-col bg-apple-surface rounded-2xl border border-apple-border overflow-hidden flex-shrink-0">
@@ -310,57 +307,11 @@ export default function ReportPage() {
           </div>
         )}
 
-        {/* Descargar / Imprimir reporte: elegir período y fecha */}
+        {/* Descargar / Imprimir reporte del período seleccionado */}
         <div className="flex-shrink-0 space-y-2">
-          <p className="text-xs font-medium text-apple-text2">Reporte por</p>
-          <div className="flex gap-2">
-            {(["day", "week", "month"] as const).map((period) => (
-              <button
-                key={period}
-                type="button"
-                onClick={() => setDownloadPeriod(period)}
-                className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors ${
-                  downloadPeriod === period
-                    ? "bg-apple-accent text-white"
-                    : "bg-apple-surface border border-apple-border text-apple-text2 hover:bg-apple-bg"
-                }`}
-              >
-                {period === "day" ? "Día" : period === "week" ? "Semana" : "Mes"}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-apple-text2 flex-shrink-0" />
-            {downloadPeriod === "month" ? (
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                max={toMonthString(today)}
-                className="flex-1 px-3 py-2.5 text-sm bg-apple-surface border border-apple-border rounded-xl text-apple-text focus:outline-none focus:ring-2 focus:ring-apple-accent"
-              />
-            ) : downloadPeriod === "week" ? (
-              <select
-                value={selectedWeek}
-                onChange={(e) => setSelectedWeek(e.target.value)}
-                className="flex-1 px-3 py-2.5 text-sm bg-apple-surface border border-apple-border rounded-xl text-apple-text focus:outline-none focus:ring-2 focus:ring-apple-accent"
-              >
-                {weekOptions.map((w) => (
-                  <option key={w.value} value={w.value}>
-                    {w.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                max={toDateString(today)}
-                className="flex-1 px-3 py-2.5 text-sm bg-apple-surface border border-apple-border rounded-xl text-apple-text focus:outline-none focus:ring-2 focus:ring-apple-accent"
-              />
-            )}
-          </div>
+          <p className="text-xs font-medium text-apple-text2">
+            Reporte: {periodStats.label}
+          </p>
           <div className="flex gap-2">
             <button
               type="button"

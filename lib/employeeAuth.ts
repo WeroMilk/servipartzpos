@@ -9,7 +9,7 @@ export interface Employee {
   id: string;
   label: string;
   password: string;
-  /** "gerente" = solo Zavala; "vendedor" = Gabriel, Alfonso, etc. */
+  /** "gerente" = Zavala; "vendedor" = Gabriel */
   role?: "gerente" | "vendedor";
 }
 
@@ -17,7 +17,6 @@ export interface Employee {
 export const EMPLOYEES: Employee[] = [
   { id: "Gerente", label: "Zavala", password: "gerente123", role: "gerente" },
   { id: "001", label: "Gabriel", password: "empleado001", role: "vendedor" },
-  { id: "002", label: "Alfonso", password: "empleado002", role: "vendedor" },
 ];
 
 function getStoredPasswords(): Record<string, string> {
