@@ -130,23 +130,39 @@ export default function ConfigPage() {
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-apple-bg">
-      <div className="flex-shrink-0 px-4 pt-2 pb-1 text-center">
+      <div className="flex-shrink-0 px-4 lg:px-6 pt-2 pb-1 text-center lg:text-left max-w-6xl mx-auto">
         <h2 className="text-lg sm:text-xl font-semibold text-apple-text">Configuraciones</h2>
         <p className="text-xs sm:text-sm text-apple-text2">Ajustes de tienda, contraseñas y pedidos.</p>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col items-center px-2 sm:px-4 py-2 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
-        <div className="flex-1 min-h-0 min-w-0 flex flex-col gap-2 sm:gap-3 w-full max-w-2xl">
-          <Link
-            href="/select-store"
-            className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-apple-border bg-apple-surface hover:bg-apple-bg transition-colors"
-          >
-            <Store className="w-5 h-5 sm:w-6 sm:h-6 text-apple-accent shrink-0" />
-            <div className="flex-1 min-w-0 text-left">
-              <p className="font-medium text-apple-text text-sm sm:text-base">Cambiar tienda</p>
-              <p className="text-xs sm:text-sm text-apple-text2 break-words">Selecciona otra sucursal para trabajar</p>
-            </div>
-          </Link>
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col items-stretch px-2 sm:px-4 lg:px-6 py-2 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col gap-2 sm:gap-3 w-full max-w-6xl mx-auto">
+          {/* Cambiar tienda + Datos fiscales: lado a lado en desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
+            <Link
+              href="/select-store"
+              className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-apple-border bg-apple-surface hover:bg-apple-bg transition-colors"
+            >
+              <Store className="w-5 h-5 sm:w-6 sm:h-6 text-apple-accent shrink-0" />
+              <div className="flex-1 min-w-0 text-left">
+                <p className="font-medium text-apple-text text-sm sm:text-base">Cambiar tienda</p>
+                <p className="text-xs sm:text-sm text-apple-text2 break-words">Selecciona otra sucursal para trabajar</p>
+              </div>
+            </Link>
+            <Link
+              href="/cfdi"
+              className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-apple-border bg-apple-surface hover:bg-apple-bg transition-colors"
+            >
+              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                <FileText className="w-4 h-4 text-apple-accent" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="font-medium text-apple-text text-sm sm:text-base">Datos fiscales (CFDI)</p>
+                <p className="text-xs sm:text-sm text-apple-text2 break-words">RFC, régimen y credenciales PAC para facturación electrónica.</p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-apple-text2 shrink-0" />
+            </Link>
+          </div>
           {/* Contraseña de empleado */}
           <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
             <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
@@ -249,21 +265,6 @@ export default function ConfigPage() {
             </section>
           </div>
 
-          {/* Datos fiscales / CFDI - enlace a pantalla dedicada */}
-          <Link
-            href="/cfdi"
-            className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-apple-border bg-apple-surface hover:bg-apple-bg transition-colors"
-          >
-            <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
-              <FileText className="w-4 h-4 text-apple-accent" aria-hidden />
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="font-medium text-apple-text text-sm sm:text-base">Datos fiscales (CFDI)</p>
-              <p className="text-xs sm:text-sm text-apple-text2 break-words">RFC, régimen y credenciales PAC para facturación electrónica.</p>
-            </div>
-            <ArrowRight className="w-5 h-5 text-apple-text2 shrink-0" />
-          </Link>
-
           {/* Backup / Exportación */}
           <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
             <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
@@ -275,7 +276,7 @@ export default function ConfigPage() {
                 <p className="text-xs sm:text-sm text-apple-text2 break-words">Exporta inventario, ventas, movimientos o todo.</p>
               </div>
             </div>
-            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => handleExport("inventory")}
@@ -307,10 +308,10 @@ export default function ConfigPage() {
                 type="button"
                 onClick={() => handleExport("all")}
                 disabled={exporting !== null}
-                className="flex items-center justify-center gap-2 px-3 py-3 bg-apple-accent text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 sm:col-span-2"
+                className="flex items-center justify-center gap-2 px-3 py-3 bg-apple-accent text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 sm:col-span-2 lg:col-span-1"
               >
                 {exporting === "all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Exportar todo (backup completo)
+                Exportar todo
               </button>
             </div>
           </section>

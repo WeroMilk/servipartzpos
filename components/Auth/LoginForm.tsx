@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, useFirebase } from "@/lib/firebase";
-import { demoAuth, DEMO_USERS } from "@/lib/demoAuth";
+import { demoAuth } from "@/lib/demoAuth";
 import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
@@ -57,14 +57,14 @@ export default function LoginForm() {
       className="relative min-h-[100dvh] min-h-screen flex items-center justify-center px-8 py-4 sm:px-6 sm:py-4 bg-apple-bg safe-area-x overflow-hidden"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      {/* Sombras azul/rojo estilo Servipartz */}
+      {/* Reflejos azules detrás del box */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <div className="login-orb-1 absolute w-[min(80vw,320px)] h-[min(80vw,320px)] rounded-full bg-primary-600 opacity-20 blur-[80px] -left-[10%] top-[5%]" />
-        <div className="login-orb-2 absolute w-[min(60vw,260px)] h-[min(60vw,260px)] rounded-full bg-primary-700 opacity-25 blur-[70px] right-[0%] top-[30%]" />
-        <div className="login-orb-3 absolute w-[min(70vw,280px)] h-[min(70vw,280px)] rounded-full bg-accent-red opacity-[0.15] blur-[90px] left-[20%] bottom-[10%]" />
-        <div className="login-orb-4 absolute w-[min(50vw,220px)] h-[min(50vw,220px)] rounded-full bg-primary-600 opacity-20 blur-[60px] right-[15%] bottom-[25%]" />
-        <div className="login-orb-5 absolute w-[min(55vw,240px)] h-[min(55vw,240px)] rounded-full bg-primary-500 opacity-[0.18] blur-[75px] left-[5%] top-[40%]" />
-        <div className="login-orb-6 absolute w-[min(65vw,270px)] h-[min(65vw,270px)] rounded-full bg-accent-red opacity-[0.12] blur-[85px] right-[25%] top-[10%]" />
+        <div className="login-orb-1 absolute w-[min(80vw,320px)] h-[min(80vw,320px)] rounded-full bg-primary-600 opacity-[0.28] blur-[80px] -left-[10%] top-[5%]" />
+        <div className="login-orb-2 absolute w-[min(60vw,260px)] h-[min(60vw,260px)] rounded-full bg-primary-700 opacity-[0.32] blur-[70px] right-[0%] top-[30%]" />
+        <div className="login-orb-3 absolute w-[min(70vw,280px)] h-[min(70vw,280px)] rounded-full bg-primary-600 opacity-[0.26] blur-[90px] left-[20%] bottom-[10%]" />
+        <div className="login-orb-4 absolute w-[min(50vw,220px)] h-[min(50vw,220px)] rounded-full bg-primary-600 opacity-[0.28] blur-[60px] right-[15%] bottom-[25%]" />
+        <div className="login-orb-5 absolute w-[min(55vw,240px)] h-[min(55vw,240px)] rounded-full bg-primary-500 opacity-[0.30] blur-[75px] left-[5%] top-[40%]" />
+        <div className="login-orb-6 absolute w-[min(65vw,270px)] h-[min(65vw,270px)] rounded-full bg-primary-600 opacity-[0.24] blur-[85px] right-[25%] top-[10%]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md min-w-0 mx-auto -mt-16 sm:mt-0">
@@ -124,32 +124,6 @@ export default function LoginForm() {
               {loading ? "Cargando..." : isLogin ? "Iniciar Sesión" : "Registrarse"}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-apple-border">
-              <p className="text-xs text-apple-text2 text-center mb-3">
-                Usuario de prueba:
-              </p>
-              <div className="space-y-2">
-                {DEMO_USERS.map((user) => (
-                  <button
-                    key={user.email}
-                    onClick={() => {
-                      setEmail(user.email);
-                      setPassword(user.password);
-                      setIsLogin(true);
-                    }}
-                    className="w-full text-center px-3 py-2 bg-apple-surface2 hover:bg-apple-border/50 rounded-xl text-xs text-apple-text hover:text-apple-accent transition-colors border border-apple-border"
-                  >
-                    <span className="font-medium">{user.email}</span>
-                    <span className="text-apple-text2"> / </span>
-                    <span className="font-medium">{user.password}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-apple-text2 text-center mt-3">
-                Haz clic en un usuario para autocompletar
-              </p>
-            </div>
 
           <footer className="mt-6 pt-4 border-t border-apple-border">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-apple-text2">

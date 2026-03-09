@@ -8,13 +8,13 @@ import { isBeerBottleId } from "@/lib/measurementRules";
 
 /** Items por página: en móvil sin scroll (reducir boxes para que todo quepa). */
 function getItemsPerPage(width: number, height: number = 800) {
-  if (width >= 1024) return 6;
+  if (width >= 1024) return 7;
   if (width >= 768) return 7;
   // Móvil: pocos ítems para que no haga falta scroll (sensación de app)
   if (height < 560) return 4;
   if (height < 620) return 5;
   if (height < 700) return 5;
-  if (height < 780) return 6;
+  if (height < 780) return 7;
   return 7;
 }
 
@@ -22,7 +22,7 @@ export default function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(() =>
-    typeof window !== "undefined" ? getItemsPerPage(window.innerWidth, window.innerHeight) : 6
+    typeof window !== "undefined" ? getItemsPerPage(window.innerWidth, window.innerHeight) : 7
   );
 
   useEffect(() => {
