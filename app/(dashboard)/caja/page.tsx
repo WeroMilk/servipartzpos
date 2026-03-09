@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package, Percent, DollarSign, Clock, AlertCircle } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package, Percent, DollarSign, Clock, AlertCircle, Lock } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
@@ -15,6 +16,7 @@ import { getCurrentShift } from "@/lib/shiftService";
 import { processQueue } from "@/lib/syncQueue";
 import { setLastSaleImport } from "@/lib/lastSaleImport";
 import { demoAuth } from "@/lib/demoAuth";
+import { employeeAuth } from "@/lib/employeeAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
 import { getProductImageUrl } from "@/lib/productImages";
 import PaymentModal from "@/components/Caja/PaymentModal";
@@ -42,6 +44,10 @@ export default function CajaPage() {
   const [discountPercent, setDiscountPercent] = useState<string>("");
   const [discountAmount, setDiscountAmount] = useState<string>("");
   const [hasOpenShift, setHasOpenShift] = useState(false);
+  const [discountUnlocked, setDiscountUnlocked] = useState(false);
+  const [showDiscountPasswordModal, setShowDiscountPasswordModal] = useState(false);
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [discountPasswordError, setDiscountPasswordError] = useState("");
 
   const checkShift = useCallback(() => {
     if (storeId) {
@@ -160,6 +166,27 @@ export default function CajaPage() {
     setDiscountAmount("");
   };
 
+  const handleDiscountSectionClick = () => {
+    if (!discountUnlocked) {
+      setShowDiscountPasswordModal(true);
+      setDiscountPassword("");
+      setDiscountPasswordError("");
+    }
+  };
+
+  const handleDiscountPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const employee = employeeAuth.validate(discountPassword);
+    if (employee) {
+      setDiscountUnlocked(true);
+      setShowDiscountPasswordModal(false);
+      setDiscountPassword("");
+      setDiscountPasswordError("");
+    } else {
+      setDiscountPasswordError("Contraseña incorrecta");
+    }
+  };
+
   const processSaleWithPayment = async (payment: {
     method?: PaymentMethod;
     payments?: { method: PaymentMethod; amount: number }[];
@@ -171,6 +198,7 @@ export default function CajaPage() {
     // Vaciar carrito de inmediato para evitar doble cobro si el usuario hace doble clic
     setCart([]);
     clearDiscount();
+    setDiscountUnlocked(false);
     setShowPaymentModal(false);
     setProcessing(true);
     const saleItems: SaleItem[] = cartToProcess.map((c) => ({
@@ -440,20 +468,44 @@ export default function CajaPage() {
           <div className="p-3 border-t border-slate-200 bg-white">
             {cart.length > 0 && (
               <div className="mb-3 space-y-2">
-                <p className="text-xs font-medium text-slate-600">Descuento</p>
-                <div className="flex gap-2">
+                <p className="text-xs font-medium text-slate-600 flex items-center gap-1"
+                  >Descuento {!discountUnlocked && <Lock className="w-3 h-3 text-slate-400" />}</p>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    if (discountUnlocked) return;
+                    e.preventDefault();
+                    handleDiscountSectionClick();
+                  }}
+                  onKeyDown={(e) => {
+                    if (!discountUnlocked && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      handleDiscountSectionClick();
+                    }
+                  }}
+                  className={`flex gap-2 rounded-lg ${!discountUnlocked ? "cursor-pointer bg-slate-50 border border-dashed border-slate-200 p-2" : ""}`}
+                >
                   <div className="flex-1 relative">
                     <Percent className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
                       inputMode="decimal"
-                      placeholder="0"
+                      placeholder={discountUnlocked ? "0" : "—"}
                       value={discountPercent}
                       onChange={(e) => {
+                        if (!discountUnlocked) return;
                         setDiscountPercent(e.target.value);
                         if (e.target.value.trim()) setDiscountAmount("");
                       }}
-                      className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      onFocus={(e) => {
+                        if (!discountUnlocked) {
+                          e.target.blur();
+                          handleDiscountSectionClick();
+                        }
+                      }}
+                      readOnly={!discountUnlocked}
+                      className={`w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 ${!discountUnlocked ? "bg-slate-50 cursor-pointer" : ""}`}
                     />
                   </div>
                   <div className="flex-1 relative">
@@ -461,16 +513,24 @@ export default function CajaPage() {
                     <input
                       type="text"
                       inputMode="decimal"
-                      placeholder="0"
+                      placeholder={discountUnlocked ? "0" : "—"}
                       value={discountAmount}
                       onChange={(e) => {
+                        if (!discountUnlocked) return;
                         setDiscountAmount(e.target.value);
                         if (e.target.value.trim()) setDiscountPercent("");
                       }}
-                      className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      onFocus={(e) => {
+                        if (!discountUnlocked) {
+                          e.target.blur();
+                          handleDiscountSectionClick();
+                        }
+                      }}
+                      readOnly={!discountUnlocked}
+                      className={`w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 ${!discountUnlocked ? "bg-slate-50 cursor-pointer" : ""}`}
                     />
                   </div>
-                  {(discountPercent || discountAmount) && (
+                  {(discountPercent || discountAmount) && discountUnlocked && (
                     <button
                       type="button"
                       onClick={clearDiscount}
@@ -481,6 +541,9 @@ export default function CajaPage() {
                     </button>
                   )}
                 </div>
+                {!discountUnlocked && (
+                  <p className="text-xs text-slate-500">Toca para ingresar contraseña y aplicar descuento</p>
+                )}
               </div>
             )}
             <div className="space-y-1 mb-3">
@@ -530,6 +593,73 @@ export default function CajaPage() {
           onNewSale={handleNewSale}
         />
       )}
+
+      <AnimatePresence>
+        {showDiscountPasswordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => {
+              setShowDiscountPasswordModal(false);
+              setDiscountPassword("");
+              setDiscountPasswordError("");
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-slate-500" />
+                Contraseña de empleado
+              </h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Se requiere autorización para aplicar descuentos (% o $)
+              </p>
+              <form onSubmit={handleDiscountPasswordSubmit} className="space-y-4">
+                <input
+                  type="password"
+                  value={discountPassword}
+                  onChange={(e) => {
+                    setDiscountPassword(e.target.value);
+                    setDiscountPasswordError("");
+                  }}
+                  placeholder="Contraseña"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  autoFocus
+                />
+                {discountPasswordError && (
+                  <p className="text-sm text-red-600">{discountPasswordError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDiscountPasswordModal(false);
+                      setDiscountPassword("");
+                      setDiscountPasswordError("");
+                    }}
+                    className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

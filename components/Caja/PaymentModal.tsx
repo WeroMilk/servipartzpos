@@ -220,7 +220,7 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
                         <input
                           type="text"
                           inputMode="decimal"
-                          placeholder="Recibido (para cambio)"
+                          placeholder="Recibido"
                           value={row.amountReceived ?? ""}
                           onChange={(e) => updateRow(row.id, { amountReceived: e.target.value })}
                           className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg"

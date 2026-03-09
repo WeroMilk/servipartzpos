@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, DollarSign, User, Loader2 } from "lucide-react";
+import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
-import { demoAuth } from "@/lib/demoAuth";
 import { employeeAuth } from "@/lib/employeeAuth";
 import {
   getCurrentShift,
@@ -32,7 +31,7 @@ export default function TurnosPage() {
   }, [storeId]);
 
   const employees = employeeAuth.getEmployees();
-  const currentUser = demoAuth.getCurrentUser();
+  const effectiveEmployeeId = selectedEmployeeId || employees[0]?.id || "";
 
   const handleOpenShift = () => {
     const amount = parseFloat(initialCash.replace(",", ".")) || 0;
@@ -40,9 +39,13 @@ export default function TurnosPage() {
       setError("El monto inicial debe ser mayor o igual a 0");
       return;
     }
-    const emp = employees.find((e) => e.id === selectedEmployeeId);
-    const employeeName = emp?.label ?? currentUser?.name ?? "Cajero";
-    const employeeId = selectedEmployeeId || (currentUser?.email ?? "default");
+    const confirmed = window.confirm(
+      `¿Confirmas que el fondo inicial de efectivo es $${amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}?`
+    );
+    if (!confirmed) return;
+    const emp = employees.find((e) => e.id === effectiveEmployeeId);
+    const employeeName = emp?.label ?? "Cajero";
+    const employeeId = effectiveEmployeeId || "default";
     setLoading(true);
     setError("");
     try {
@@ -145,11 +148,10 @@ export default function TurnosPage() {
                     Cajero
                   </label>
                   <select
-                    value={selectedEmployeeId}
+                    value={effectiveEmployeeId}
                     onChange={(e) => setSelectedEmployeeId(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="">{currentUser?.name ?? "Usuario actual"}</option>
                     {employees.map((e) => (
                       <option key={e.id} value={e.id}>
                         {e.label}
@@ -197,36 +199,79 @@ export default function TurnosPage() {
   );
 }
 
+const ITEMS_PER_PAGE = 5;
+
 function ShiftHistory({ storeId }: { storeId: string }) {
+  const [page, setPage] = useState(0);
   const [shifts, setShifts] = useState<Shift[]>([]);
 
   useEffect(() => {
-    setShifts(getShiftsForStore(storeId, 10));
+    const all = getShiftsForStore(storeId, 200).filter((s) => s.status === "closed");
+    setShifts(all);
+    setPage(0);
   }, [storeId]);
 
+  const totalPages = Math.max(1, Math.ceil(shifts.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const pageShifts = shifts.slice(
+    currentPage * ITEMS_PER_PAGE,
+    (currentPage + 1) * ITEMS_PER_PAGE
+  );
+
+  const formatTime = (d: Date) =>
+    d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const formatDate = (d: Date) => d.toLocaleDateString("es-MX");
+
   if (shifts.length === 0) {
-    return <p className="text-xs text-slate-500">Sin turnos registrados</p>;
+    return <p className="text-xs text-slate-500">Sin turnos cerrados</p>;
   }
 
   return (
-    <ul className="space-y-2">
-      {shifts.map((s) => (
-        <li
-          key={s.id}
-          className="flex justify-between items-center text-sm py-2 border-b border-slate-200 last:border-0"
-        >
-          <span className="text-slate-600">
-            {s.employeeName} · {s.openedAt.toLocaleDateString("es-MX")}
-          </span>
-          <span
-            className={`px-2 py-0.5 rounded text-xs font-medium ${
-              s.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
-            }`}
+    <div>
+      <ul className="space-y-2">
+        {pageShifts.map((s) => (
+          <li
+            key={s.id}
+            className="flex flex-col gap-0.5 py-2 border-b border-slate-200 last:border-0"
           >
-            {s.status === "open" ? "Abierto" : "Cerrado"}
+            <div className="flex justify-between items-start">
+              <span className="font-medium text-slate-700">{s.employeeName}</span>
+              <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-200 text-slate-600">
+                Cerrado
+              </span>
+            </div>
+            <div className="text-xs text-slate-500">
+              {formatDate(s.openedAt)} · Abierto {formatTime(s.openedAt)} · Cerrado{" "}
+              {s.closedAt ? formatTime(s.closedAt) : "—"}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={currentPage === 0}
+            className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Anterior
+          </button>
+          <span className="text-xs text-slate-500">
+            {currentPage + 1} / {totalPages}
           </span>
-        </li>
-      ))}
-    </ul>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={currentPage >= totalPages - 1}
+            className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Siguiente
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
