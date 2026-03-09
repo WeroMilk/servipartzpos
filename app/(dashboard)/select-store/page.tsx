@@ -20,7 +20,7 @@ export default function SelectStorePage() {
 
     if (storeIds.length === 1 && storeIds[0] === "default") {
       storeStore.setStore("default", user?.barName || "Tienda principal");
-      router.replace("/bar");
+      router.replace("/caja");
       return;
     }
 
@@ -34,7 +34,7 @@ export default function SelectStorePage() {
           setStores(filtered);
           if (filtered.length === 1) {
             storeStore.setStore(filtered[0].id, filtered[0].name);
-            router.replace("/bar");
+            router.replace("/caja");
           }
         })
         .catch(() => setStores([]))

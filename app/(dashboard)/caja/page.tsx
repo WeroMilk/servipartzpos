@@ -191,10 +191,11 @@ export default function CajaPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar producto..."
+                placeholder="Buscar producto... (escribe para filtrar)"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                autoFocus
+                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -206,17 +207,35 @@ export default function CajaPage() {
             ) : (
               <div className="space-y-1">
                 {filtered.map((item) => (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => addToCart(item)}
-                    disabled={item.stock <= 0}
-                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                    className="flex items-center gap-1 p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200"
                   >
-                    <span className="font-medium text-slate-900 truncate">{item.name}</span>
-                    <span className="text-xs text-slate-500 shrink-0 ml-2">
-                      Stock: {item.stock} {item.price != null ? `· $${item.price}` : ""}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(item)}
+                      disabled={item.stock <= 0}
+                      className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="font-medium text-slate-900 truncate text-sm">{item.name}</span>
+                      <span className="text-xs text-slate-500 shrink-0 mt-0.5 sm:mt-0 sm:ml-2">
+                        Stock: {item.stock} {item.price != null ? `· $${item.price}` : ""}
+                      </span>
+                    </button>
+                    <div className="flex gap-0.5 shrink-0">
+                      {[1, 2, 5, 10].map((qty) => (
+                        <button
+                          key={qty}
+                          type="button"
+                          onClick={() => addToCart(item, qty)}
+                          disabled={item.stock < qty}
+                          className="min-w-[28px] h-7 px-1.5 rounded-md bg-primary-100 text-primary-700 text-xs font-semibold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          +{qty}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -273,10 +292,10 @@ export default function CajaPage() {
               </ul>
             )}
           </div>
-          <div className="p-3 border-t border-slate-200">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-slate-500">Total</span>
-              <span className="font-semibold text-slate-900">
+          <div className="p-3 border-t border-slate-200 bg-white">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-sm text-slate-500">Total</span>
+              <span className="text-xl font-bold text-slate-900">
                 {total > 0 ? `$${total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"}
               </span>
             </div>
@@ -284,9 +303,9 @@ export default function CajaPage() {
               type="button"
               onClick={handleCobrar}
               disabled={cart.length === 0 || processing}
-              className="w-full py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-4 bg-emerald-600 text-white font-bold text-lg rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30"
             >
-              {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
+              {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : <ShoppingCart className="w-6 h-6" />}
               Cobrar
             </button>
           </div>

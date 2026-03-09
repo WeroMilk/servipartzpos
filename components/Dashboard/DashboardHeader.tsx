@@ -14,9 +14,10 @@ interface DashboardHeaderProps {
   notificationsCount?: number;
 }
 
+const POS_NAV = { href: "/caja", icon: ShoppingCart, label: "Punto de venta" };
+
 const NAV_ITEMS = [
   { href: "/bar", icon: Package, label: "Inventario" },
-  { href: "/caja", icon: ShoppingCart, label: "Caja" },
   { href: "/movements", icon: Bell, label: "Movimientos" },
   { href: "/report", icon: DollarSign, label: "Reporte de ventas" },
   { href: "/import-order", icon: PackageOpen, label: "Importar pedido" },
@@ -38,7 +39,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
         <div className="flex items-center h-full relative min-h-[44px] sm:min-h-[56px] px-4 sm:px-6">
           {/* Logo / Título */}
           <div className="flex-1 flex items-center min-w-0">
-            <Link href="/bar" title="Ir a Inventario" className="flex items-center gap-2 shrink-0">
+            <Link href="/caja" title="Ir a Punto de venta" className="flex items-center gap-2 shrink-0">
               <span className="text-base sm:text-lg font-semibold text-white">Servipartz</span>
               <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[120px]">
                 {storeStore.getStoreName() || demoAuth.getCurrentUser()?.barName || "POS"}
@@ -61,6 +62,19 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
           {/* Desktop: navegación */}
           <nav className="hidden md:flex items-center gap-1">
             {leftContent}
+            <Link
+              href={POS_NAV.href}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+                pathname === POS_NAV.href
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                  : "bg-emerald-500 text-white hover:bg-emerald-600 shadow-md hover:shadow-lg"
+              }`}
+              title={POS_NAV.label}
+              aria-label={POS_NAV.label}
+            >
+              <POS_NAV.icon className="w-5 h-5 flex-shrink-0" />
+              <span>{POS_NAV.label}</span>
+            </Link>
             {demoAuth.getCurrentUser()?.role === "admin" && (
               <Link
                 href={ADMIN_NAV.href}
@@ -135,6 +149,22 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
               </div>
               <nav className="flex-1 overflow-y-auto py-2" aria-label="Navegación principal">
                 <ul className="px-2 space-y-0.5">
+                  <li>
+                    <Link
+                      href={POS_NAV.href}
+                      onClick={() => setMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-colors ${
+                        pathname === POS_NAV.href
+                          ? "bg-emerald-500 text-white"
+                          : "bg-emerald-500/90 text-white hover:bg-emerald-600"
+                      }`}
+                    >
+                      <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20">
+                        <POS_NAV.icon className="w-6 h-6" strokeWidth={2} />
+                      </span>
+                      <span className="font-semibold text-[16px]">{POS_NAV.label}</span>
+                    </Link>
+                  </li>
                   {demoAuth.getCurrentUser()?.role === "admin" && (
                     <li>
                       <Link
