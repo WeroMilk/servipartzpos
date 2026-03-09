@@ -280,7 +280,7 @@ export async function exportAll(): Promise<void> {
   const payload = {
     exportedAt: new Date().toISOString(),
     storeId: storeId ?? "default",
-    storeName: storeStore.getStoreName() ?? "Tienda principal",
+    storeName: storeStore.getStoreName() ?? "Matriz",
     inventory,
     sales,
     movements,

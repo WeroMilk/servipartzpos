@@ -39,8 +39,8 @@ export default function StoresPage() {
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const isAdmin = demoAuth.getCurrentUser()?.role === "admin";
-  // En modo demo (sin Firebase) permitir gestionar tiendas a todos los usuarios
-  const canManageStores = useFirebase ? isAdmin : true;
+  // Todos los usuarios pueden crear, editar y eliminar tiendas
+  const canManageStores = true;
 
   useEffect(() => {
     loadStores();
@@ -49,7 +49,7 @@ export default function StoresPage() {
   const loadStores = async () => {
     const fallbackToDemo = () => {
       const user = demoAuth.getCurrentUser();
-      const storeName = user?.storeName ?? "Tienda principal";
+      const storeName = user?.storeName ?? "Matriz";
       const local = localStores.ensureDefault(storeName);
       setStores(local);
     };
@@ -66,7 +66,7 @@ export default function StoresPage() {
           const filtered = isAdmin ? result : result.filter((s) => storeIds.includes(s.id));
           setStores(filtered.length > 0 ? filtered : [{
             id: "default",
-            name: demoAuth.getCurrentUser()?.storeName ?? "Tienda principal",
+            name: demoAuth.getCurrentUser()?.storeName ?? "Matriz",
             createdAt: new Date(),
           }]);
         }
@@ -194,7 +194,7 @@ export default function StoresPage() {
               Tiendas
             </h2>
             <p className="text-xs text-slate-500">
-              Entra a una tienda para cobrar, ver ventas e inventario. O entra como gerente para ver todas.
+              Entra a una tienda para cobrar, ver ventas e inventario. Crea, edita o elimina tiendas según necesites.
             </p>
           </div>
         </div>

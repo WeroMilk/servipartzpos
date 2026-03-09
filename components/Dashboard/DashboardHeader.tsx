@@ -55,7 +55,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
             <Link href="/caja" title="Ir a Punto de venta" className="flex items-center gap-2 shrink-0">
               <span className="text-base sm:text-lg font-bold text-white tracking-tight">Servipartz</span>
               <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[120px]">
-                {storeStore.getStoreName() || demoAuth.getCurrentUser()?.storeName || "Tienda principal"}
+                {storeStore.getStoreName() || demoAuth.getCurrentUser()?.storeName || "Matriz"}
               </span>
             </Link>
           </div>

@@ -55,7 +55,7 @@ export default function AdminPage() {
         .finally(() => setLoading(false));
     } else {
       const stats = getSalesStats();
-      const storeName = demoAuth.getCurrentUser()?.storeName ?? "Tienda principal";
+      const storeName = demoAuth.getCurrentUser()?.storeName ?? "Matriz";
       setSummaries([
         {
           storeId: "default",

@@ -60,7 +60,7 @@ export const demoAuth = {
           email,
           password,
           name: name || email.split("@")[0],
-          storeName: storeName || "Mi Tienda",
+          storeName: storeName || "Matriz",
         };
         DEMO_USERS.push(newUser);
         currentDemoUser = newUser;
@@ -97,7 +97,7 @@ export const demoAuth = {
   updateStoreName: (storeName: string): void => {
     const user = demoAuth.getCurrentUser();
     if (user) {
-      user.storeName = storeName.trim() || "Mi Tienda";
+      user.storeName = storeName.trim() || "Matriz";
       currentDemoUser = user;
       localStorage.setItem("demo_user", JSON.stringify(user));
     }

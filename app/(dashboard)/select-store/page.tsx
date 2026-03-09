@@ -19,7 +19,7 @@ export default function SelectStorePage() {
     const storeIds = user?.storeIds ?? ["default"];
 
     if (storeIds.length === 1 && storeIds[0] === "default") {
-      storeStore.setStore("default", user?.storeName || "Tienda principal");
+      storeStore.setStore("default", user?.storeName || "Matriz");
       router.replace("/caja");
       return;
     }
@@ -43,7 +43,7 @@ export default function SelectStorePage() {
       setStores(
         storeIds.map((id) => ({
           id,
-          name: id === "default" ? (user?.storeName || "Tienda principal") : id,
+          name: id === "default" ? (user?.storeName || "Matriz") : id,
           createdAt: new Date(),
         }))
       );
