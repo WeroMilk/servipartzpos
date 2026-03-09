@@ -20,6 +20,7 @@ export default function LogoutButton({ className = "", showText = true, alwaysSh
 
   const handleLogout = async () => {
     if (useFirebase && auth) {
+      demoAuth.clearFirebaseProfile();
       await signOut(auth);
     } else {
       demoAuth.signOut();

@@ -60,7 +60,7 @@ export const employeeAuth = {
     const all = employeeAuth.getEmployees();
     if (typeof window === "undefined") return all;
     try {
-      const raw = localStorage.getItem("demo_user");
+      const raw = localStorage.getItem("demo_user") || localStorage.getItem("servipartz-firebase-user");
       if (!raw) return all;
       const user = JSON.parse(raw) as { email?: string };
       const email = (user?.email || "").toLowerCase();

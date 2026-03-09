@@ -1,14 +1,25 @@
 // Sistema de autenticación demo para pruebas sin Firebase
-// Sin credenciales hardcodeadas por seguridad
+// Con soporte para perfil de Firestore cuando Firebase está activo
+
+import { employeeAuth } from "./employeeAuth";
 
 const REGISTERED_KEY = "servipartz-demo-registered";
+const FIREBASE_USER_KEY = "servipartz-firebase-user";
 
 export interface DemoUser {
   email: string;
-  password: string;
+  password?: string;
   name: string;
   storeName?: string;
   role?: "admin" | "store_user";
+  storeIds?: string[];
+}
+
+/** Perfil de Firestore compatible con DemoUser */
+export interface FirebaseUserProfile {
+  email: string;
+  name?: string;
+  role: "admin" | "store_user";
   storeIds?: string[];
 }
 
@@ -84,11 +95,43 @@ export const demoAuth = {
   signOut: (): void => {
     currentDemoUser = null;
     localStorage.removeItem("demo_user");
+    localStorage.removeItem(FIREBASE_USER_KEY);
+  },
+
+  /** Inyecta perfil de Firestore (modo Firebase). Usado por AuthGuard tras login. */
+  setFirebaseProfile: (profile: FirebaseUserProfile): void => {
+    const user: DemoUser = {
+      email: profile.email,
+      name: profile.name ?? profile.email.split("@")[0],
+      storeName: "Matriz",
+      role: profile.role,
+      storeIds: profile.storeIds ?? ["default"],
+    };
+    currentDemoUser = user;
+    localStorage.setItem(FIREBASE_USER_KEY, JSON.stringify(user));
+  },
+
+  /** Limpia perfil de Firebase (al cerrar sesión). */
+  clearFirebaseProfile: (): void => {
+    if (typeof window === "undefined") return;
+    currentDemoUser = null;
+    localStorage.removeItem(FIREBASE_USER_KEY);
   },
 
   getCurrentUser: (): DemoUser | null => {
     if (currentDemoUser) return currentDemoUser;
-    const stored = localStorage.getItem("demo_user");
+    // Prioridad: perfil Firebase (cuando se usa Firebase Auth)
+    const fbStored = typeof window !== "undefined" ? localStorage.getItem(FIREBASE_USER_KEY) : null;
+    if (fbStored) {
+      try {
+        const parsed = JSON.parse(fbStored) as DemoUser;
+        currentDemoUser = parsed;
+        return currentDemoUser;
+      } catch {
+        localStorage.removeItem(FIREBASE_USER_KEY);
+      }
+    }
+    const stored = typeof window !== "undefined" ? localStorage.getItem("demo_user") : null;
     if (stored) {
       const parsed = JSON.parse(stored) as DemoUser & { barName?: string };
       // Migración: barName -> storeName
@@ -114,6 +157,9 @@ export const demoAuth = {
     const user = demoAuth.getCurrentUser();
     if (!user) return false;
     const email = (user.email || "").toLowerCase();
+    // Con Firestore: role store_user + email gabriel = limitado
+    if (user.role === "store_user" && email === "gabriel@servipartz.com") return true;
+    // Modo demo: solo por email
     return email === "gabriel@servipartz.com";
   },
 
@@ -121,12 +167,27 @@ export const demoAuth = {
   isAdminUser: (): boolean => {
     const user = demoAuth.getCurrentUser();
     if (!user) return false;
+    // Con Firestore: role admin
+    if (user.role === "admin") return true;
+    // Modo demo: por email
     const email = (user.email || "").toLowerCase();
     return email === "zavala@servipartz.com" || email === "piti@servipartz.com";
   },
 
   /** Verifica contraseña del gerente (Zavala) para permitir acciones restringidas a vendedores */
   verifyManagerPassword: (password: string): boolean => {
+    // Modo Firebase: usa employeeAuth (gerente en Configuración)
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem(FIREBASE_USER_KEY);
+      if (raw) {
+        const emp = employeeAuth.validate(password);
+        if (emp) {
+          const full = employeeAuth.getEmployees().find((e) => e.id === emp.id);
+          return full?.role === "gerente";
+        }
+        return false;
+      }
+    }
     const users = getRegisteredUsers();
     const manager = users.find(
       (u) =>
@@ -138,10 +199,11 @@ export const demoAuth = {
 
   updateStoreName: (storeName: string): void => {
     const user = demoAuth.getCurrentUser();
-    if (user) {
+    if (user && typeof window !== "undefined") {
       user.storeName = storeName.trim() || "Matriz";
       currentDemoUser = user;
-      localStorage.setItem("demo_user", JSON.stringify(user));
+      const key = localStorage.getItem(FIREBASE_USER_KEY) ? FIREBASE_USER_KEY : "demo_user";
+      localStorage.setItem(key, JSON.stringify(user));
     }
   },
 
