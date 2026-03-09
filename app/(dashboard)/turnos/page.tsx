@@ -6,6 +6,7 @@ import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X } from "lucide
 import { storeStore } from "@/lib/storeStore";
 import { employeeAuth } from "@/lib/employeeAuth";
 import { demoAuth } from "@/lib/demoAuth";
+import { movementsService, notificationsService } from "@/lib/movements";
 import {
   getCurrentShift,
   openShift,
@@ -59,6 +60,15 @@ export default function TurnosPage() {
     setError("");
     try {
       openShift(storeId ?? "default", employeeId, employeeName, pendingAmount);
+      movementsService.add({
+        type: "shift_open",
+        bottleId: "_",
+        bottleName: "Caja",
+        newValue: pendingAmount,
+        userName: demoAuth.getCurrentUser()?.name ?? employeeName,
+        description: `Apertura de caja: ${employeeName} - Fondo inicial $${pendingAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+      });
+      notificationsService.incrementUnread();
       setInitialCash("");
       refreshShift();
     } catch (e) {

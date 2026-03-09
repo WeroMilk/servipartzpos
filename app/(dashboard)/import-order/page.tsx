@@ -7,7 +7,7 @@ import { applyOrderToInventory, sheetToOrderRows } from "@/lib/orderImport";
 import { buildSalesOrderExcelTemplate, downloadSalesOrderTemplate } from "@/lib/excelTemplate";
 import { setLastInventoryUpdate } from "@/lib/inventoryUpdate";
 import { setLastInventoryComplete } from "@/lib/lastInventoryComplete";
-import { movementsService } from "@/lib/movements";
+import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { useToast } from "@/components/Toast/ToastContext";
 
@@ -103,6 +103,7 @@ export default function ImportOrderPage() {
         userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
         description: `${result.applied.length} líneas sumadas al inventario`,
       });
+      notificationsService.incrementUnread();
 
       setAppliedCount(result.applied.length);
       setUnmatchedCount(result.unmatched.length);

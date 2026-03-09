@@ -13,7 +13,9 @@ export type MovementType =
   | "order_import"
   | "bottles_reorder"
   | "sort_change"
-  | "return";
+  | "return"
+  | "shift_open"
+  | "shift_close";
 
 export interface Movement {
   id: string;
@@ -78,9 +80,9 @@ export const movementsService = {
       timestamp: new Date(),
     };
     movements.unshift(newMovement);
-    // Mantener solo los últimos 100 movimientos
-    if (movements.length > 100) {
-      movements = movements.slice(0, 100);
+    // Mantener solo los últimos 500 movimientos
+    if (movements.length > 500) {
+      movements = movements.slice(0, 500);
     }
     localStorage.setItem("bottle-movements", JSON.stringify(movements));
     return newMovement;

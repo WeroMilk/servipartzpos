@@ -44,8 +44,9 @@ export default function DashboardLayout({
     }
   }, [pathname, router]);
 
-  // Usuario limitado (Gabriel): solo caja, inventario, turnos y devoluciones
+  // Usuario limitado (Gabriel): solo caja, turnos y devoluciones (con contraseña gerente). Sin inventario ni nada más.
   const restrictedForLimited = [
+    "/inventario",
     "/report",
     "/movements",
     "/import-order",

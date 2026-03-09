@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/Auth/AuthGuard";
 import { categories, defaultBottles } from "@/lib/bottlesData";
 import { saveInventory } from "@/lib/inventoryStorage";
-import { movementsService } from "@/lib/movements";
+import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { Bottle } from "@/lib/types";
 import { Check, ChevronRight, ChevronLeft } from "lucide-react";
@@ -97,6 +97,7 @@ export default function SelectBottlesPage() {
       userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
       description: `Inventario actualizado: ${barBottles.length} productos`,
     });
+    notificationsService.incrementUnread();
     router.push("/inventario");
   };
 

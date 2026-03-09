@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { movementsService, notificationsService, Movement } from "@/lib/movements";
+import { demoAuth } from "@/lib/demoAuth";
 import { motion } from "framer-motion";
-import { Check, X, Edit, Settings, ChevronLeft, ChevronRight, Package, Type, Calendar, FileSpreadsheet, ArrowLeftRight, ClipboardCheck, Lock } from "lucide-react";
+import { Check, X, Edit, Settings, ChevronLeft, ChevronRight, Package, Type, Calendar, FileSpreadsheet, ArrowLeftRight, ClipboardCheck, Lock, RotateCcw, DollarSign } from "lucide-react";
 import { isBeerBottleId } from "@/lib/measurementRules";
 
 /** Items por página: en móvil sin scroll (reducir boxes para que todo quepa).
@@ -75,6 +76,9 @@ export default function MovementsPage() {
       case "order_import": return <FileSpreadsheet className="w-4 h-4 text-orange-500" />;
       case "bottles_reorder": return <ArrowLeftRight className="w-4 h-4 text-cyan-600" />;
       case "sort_change": return <Settings className="w-4 h-4 text-slate-500" />;
+      case "return": return <RotateCcw className="w-4 h-4 text-amber-600" />;
+      case "shift_open": return <DollarSign className="w-4 h-4 text-emerald-600" />;
+      case "shift_close": return <DollarSign className="w-4 h-4 text-slate-600" />;
       default: return null;
     }
   };
@@ -123,7 +127,7 @@ export default function MovementsPage() {
             <h2 className="text-lg font-semibold text-apple-text">Movimientos</h2>
             <p className="text-xs text-apple-text2">Historial de cambios en el inventario</p>
           </div>
-          {movements.length > 0 && (
+          {movements.length > 0 && demoAuth.isAdminUser() && (
             <button
               type="button"
               onClick={handleClearAll}

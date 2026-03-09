@@ -46,7 +46,7 @@ export default function LoginForm() {
           await demoAuth.signUp(fullEmail, password);
         }
       }
-      router.push("/stores");
+      router.push(demoAuth.isLimitedUser() ? "/select-store" : "/stores");
     } catch (err: any) {
       const code = err?.code ?? "";
       const messages: Record<string, string> = {

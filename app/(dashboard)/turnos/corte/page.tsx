@@ -11,6 +11,8 @@ import {
 import { getSalesByShift } from "@/lib/salesRegistry";
 import { getShiftById, closeShift } from "@/lib/shiftService";
 import { storeStore } from "@/lib/storeStore";
+import { movementsService, notificationsService } from "@/lib/movements";
+import { demoAuth } from "@/lib/demoAuth";
 import { SERVIPARTZ_INFO } from "@/lib/storeInfo";
 import type { PaymentMethod } from "@/lib/types";
 
@@ -199,8 +201,18 @@ function CorteContent() {
     setLoading(true);
     setError("");
     try {
+      const shift = getShiftById(shiftId);
       const cut = saveCashCount(shiftId, actual, summary);
       closeShift(shiftId);
+      movementsService.add({
+        type: "shift_close",
+        bottleId: "_",
+        bottleName: "Caja",
+        newValue: actual,
+        userName: demoAuth.getCurrentUser()?.name ?? shift?.employeeName ?? "Sistema",
+        description: `Cierre de caja: turno de ${shift?.employeeName ?? "—"} - Efectivo contado $${actual.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+      });
+      notificationsService.incrementUnread();
       setSavedCut(cut);
       setSavedSummary(summary);
       setCutSaved(true);

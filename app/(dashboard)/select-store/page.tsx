@@ -53,7 +53,7 @@ export default function SelectStorePage() {
 
   const handleSelect = (store: StoreType) => {
     storeStore.setStore(store.id, store.name);
-    router.push("/inventario");
+    router.push(demoAuth.isLimitedUser() ? "/caja" : "/inventario");
   };
 
   if (loading) {

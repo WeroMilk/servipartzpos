@@ -109,7 +109,7 @@ export const demoAuth = {
     return demoAuth.getCurrentUser() !== null;
   },
 
-  /** Usuario limitado (Gabriel): vendedor - solo caja, inventario, turnos y devoluciones (devoluciones pide contraseña de Zavala) */
+  /** Usuario limitado (Gabriel): vendedor - solo caja, turnos y devoluciones (devoluciones pide contraseña del gerente) */
   isLimitedUser: (): boolean => {
     const user = demoAuth.getCurrentUser();
     if (!user) return false;

@@ -9,7 +9,7 @@ import { storeStore } from "@/lib/storeStore";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
-import { movementsService } from "@/lib/movements";
+import { movementsService, notificationsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
 import { addSaleRecord, getProductSalesCounts } from "@/lib/salesRegistry";
 import { getCurrentShift } from "@/lib/shiftService";
@@ -253,6 +253,7 @@ export default function CajaPage() {
           description: `Venta: ${a.bottleName} -${a.deducted} ${a.unit}`,
         });
       });
+      notificationsService.incrementUnread();
 
       setLastSaleImport();
       const payments = payment.payments ?? [];

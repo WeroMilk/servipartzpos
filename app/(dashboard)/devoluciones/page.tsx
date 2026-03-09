@@ -7,7 +7,7 @@ import { storeStore } from "@/lib/storeStore";
 import { loadInventory, saveInventory, addStockToProduct } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
-import { movementsService } from "@/lib/movements";
+import { movementsService, notificationsService } from "@/lib/movements";
 import { addSaleRecord, getSaleByTicket } from "@/lib/salesRegistry";
 import { demoAuth } from "@/lib/demoAuth";
 import type { Bottle, SaleItem } from "@/lib/types";
@@ -181,6 +181,7 @@ export default function DevolucionesPage() {
           description: `Devolución: ${item.name} +${item.quantity} unid`,
         });
       }
+      notificationsService.incrementUnread();
 
       addSaleRecord({
         ticketNumber: 0,
