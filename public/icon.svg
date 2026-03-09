@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="8" fill="#000000"/>
+  <!-- Copa de vino naranja -->
+  <g fill="#E67E22">
+    <!-- Copa (cáliz): trapecio invertido -->
+    <path d="M10 5h12l-2 12H12L10 5z"/>
+    <!-- Tallo -->
+    <path d="M14.5 17h3v5h-3z"/>
+    <!-- Base -->
+    <path d="M12 22h8v2c0 .5-.4 1-1 1h-6c-.6 0-1-.5-1-1v-2z"/>
+  </g>
+  <!-- Brillo -->
+  <path d="M12 7h1.5v8H12z" fill="#fff" fill-opacity="0.25"/>
+</svg>
