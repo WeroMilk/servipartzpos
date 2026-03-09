@@ -24,7 +24,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (demoAuth.getCurrentUser()?.role !== "admin") {
+    if (!demoAuth.isAdminUser()) {
       router.replace("/inventario");
       return;
     }

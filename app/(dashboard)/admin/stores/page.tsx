@@ -40,7 +40,7 @@ export default function AdminStoresPage() {
   const [viewStats, setViewStats] = useState<{ sales: number; products: number } | null>(null);
 
   useEffect(() => {
-    if (demoAuth.getCurrentUser()?.role !== "admin") {
+    if (!demoAuth.isAdminUser()) {
       router.replace("/inventario");
       return;
     }
@@ -148,7 +148,7 @@ export default function AdminStoresPage() {
     }
   };
 
-  if (demoAuth.getCurrentUser()?.role !== "admin") return null;
+  if (!demoAuth.isAdminUser()) return null;
 
   if (!useFirebase) {
     return (

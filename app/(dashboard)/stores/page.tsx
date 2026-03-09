@@ -39,7 +39,7 @@ export default function StoresPage() {
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [useLocalStores, setUseLocalStores] = useState(false);
-  const isAdmin = demoAuth.getCurrentUser()?.role === "admin";
+  const isAdmin = demoAuth.isAdminUser();
   // Todos los usuarios pueden crear, editar y eliminar tiendas
   const canManageStores = true;
 

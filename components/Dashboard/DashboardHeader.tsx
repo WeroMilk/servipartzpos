@@ -95,7 +95,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
               <POS_NAV.icon className="w-5 h-5 flex-shrink-0" />
               <span>{POS_NAV.label}</span>
             </Link>
-            {demoAuth.getCurrentUser()?.role === "admin" && !demoAuth.isLimitedUser() && (
+            {demoAuth.isAdminUser() && (
               <>
                 <Link
                   href={STORES_NAV.href}
@@ -204,7 +204,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                       <span className="font-semibold text-[16px]">{POS_NAV.label}</span>
                     </Link>
                   </li>
-                  {demoAuth.getCurrentUser()?.role === "admin" && !demoAuth.isLimitedUser() && (
+                  {demoAuth.isAdminUser() && (
                     <>
                       <li>
                         <Link

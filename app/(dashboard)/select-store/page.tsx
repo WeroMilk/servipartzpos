@@ -28,7 +28,7 @@ export default function SelectStorePage() {
       getStores()
         .then((all) => {
           const filtered =
-            user?.role === "admin"
+            demoAuth.isAdminUser()
               ? all
               : all.filter((s) => storeIds.includes(s.id));
           setStores(filtered);

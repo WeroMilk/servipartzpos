@@ -37,6 +37,15 @@ export const demoAuth = {
         const users = getRegisteredUsers();
         const user = users.find((u) => u.email === email && u.password === password);
         if (user) {
+          const emailLower = (user.email || "").toLowerCase();
+          if (emailLower === "gabriel@servipartz.com") {
+            user.role = "store_user";
+            const idx = users.findIndex((u) => (u.email || "").toLowerCase() === emailLower);
+            if (idx >= 0) {
+              users[idx].role = "store_user";
+              saveRegisteredUsers(users);
+            }
+          }
           currentDemoUser = user;
           localStorage.setItem("demo_user", JSON.stringify(user));
           resolve(user);
@@ -85,6 +94,10 @@ export const demoAuth = {
       // Migración: barName -> storeName
       if (parsed.barName && !parsed.storeName) {
         parsed.storeName = parsed.barName;
+      }
+      // Gabriel siempre es vendedor, nunca admin
+      if ((parsed.email || "").toLowerCase() === "gabriel@servipartz.com") {
+        parsed.role = "store_user";
       }
       currentDemoUser = parsed;
       return currentDemoUser;
