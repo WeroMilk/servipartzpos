@@ -26,9 +26,9 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    const skipStoreCheck = pathname === "/select-store" || pathname?.startsWith("/admin/stores");
+    const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname?.startsWith("/admin");
     if (!skipStoreCheck && !storeStore.getStoreId()) {
-      router.replace("/select-store");
+      router.replace("/stores");
     }
   }, [pathname, router]);
 

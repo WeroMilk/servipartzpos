@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 ] as const;
 
 const ADMIN_NAV = { href: "/admin", icon: BarChart3, label: "Panel gerente" };
-const STORES_NAV = { href: "/admin/stores", icon: Store, label: "Gestión de tiendas" };
+const STORES_NAV = { href: "/stores", icon: Store, label: "Gestión de tiendas" };
 
 export default function DashboardHeader({ leftContent, notificationsCount = 0 }: DashboardHeaderProps) {
   const pathname = usePathname();

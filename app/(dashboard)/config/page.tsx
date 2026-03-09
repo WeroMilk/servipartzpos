@@ -130,17 +130,12 @@ export default function ConfigPage() {
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-apple-bg">
-      <div className="flex-shrink-0 px-4 lg:px-6 pt-2 pb-1 text-center lg:text-left max-w-6xl mx-auto">
-        <h2 className="text-lg sm:text-xl font-semibold text-apple-text">Configuraciones</h2>
-        <p className="text-xs sm:text-sm text-apple-text2">Ajustes de tienda, contraseñas y pedidos.</p>
-      </div>
-
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col items-stretch px-2 sm:px-4 lg:px-6 py-2 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
         <div className="flex-1 min-h-0 min-w-0 flex flex-col gap-2 sm:gap-3 w-full max-w-6xl mx-auto">
           {/* Cambiar tienda + Datos fiscales: lado a lado en desktop */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
             <Link
-              href="/select-store"
+              href="/stores"
               className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-apple-border bg-apple-surface hover:bg-apple-bg transition-colors"
             >
               <Store className="w-5 h-5 sm:w-6 sm:h-6 text-apple-accent shrink-0" />

@@ -44,7 +44,7 @@ export default function LoginForm() {
           await demoAuth.signUp(email, password);
         }
       }
-      router.push("/select-store");
+      router.push("/stores");
     } catch (err: any) {
       setError(err.message || "Error al autenticar");
     } finally {
