@@ -116,17 +116,6 @@ export default function LoginForm() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-apple-accent hover:text-apple-accent/80 text-sm transition-colors"
-            >
-              {isLogin
-                ? "¿No tienes cuenta? Regístrate"
-                : "¿Ya tienes cuenta? Inicia sesión"}
-            </button>
-          </div>
-
           {!useFirebase && (
             <div className="mt-6 pt-6 border-t border-apple-border">
               <p className="text-xs text-apple-text2 text-center mb-3">
