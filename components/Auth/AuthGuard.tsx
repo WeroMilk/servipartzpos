@@ -8,41 +8,75 @@ import { demoAuth } from "@/lib/demoAuth";
 import { useRouter } from "next/navigation";
 import BottleSpinner from "@/components/Loading/BottleSpinner";
 
+async function loadFirebaseUserAndProfile() {
+  if (!auth?.currentUser) return false;
+  const user = auth.currentUser;
+  try {
+    let profile = await getUserProfile(user.uid);
+    if (!profile) {
+      profile = {
+        email: user.email ?? "",
+        name: user.displayName ?? user.email?.split("@")[0],
+        role: "store_user",
+        storeIds: ["default"],
+      };
+      await setUserProfile(user.uid, profile);
+    }
+    demoAuth.setFirebaseProfile(profile);
+    return true;
+  } catch (e) {
+    console.error("Error cargando perfil:", e);
+    demoAuth.clearFirebaseProfile();
+    return false;
+  }
+}
+
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     if (useFirebase && auth) {
-      // Usar Firebase real: cargar perfil de Firestore
+      let mounted = true;
+      let initialCheckDone = false;
+      const run = async () => {
+        try {
+          await auth.authStateReady();
+          if (!mounted) return;
+          if (!auth.currentUser) {
+            demoAuth.clearFirebaseProfile();
+            router.push("/");
+            return;
+          }
+          const ok = await loadFirebaseUserAndProfile();
+          if (!mounted) return;
+          if (!ok) {
+            router.push("/");
+            return;
+          }
+          setLoading(false);
+        } catch (e) {
+          console.error("AuthGuard error:", e);
+          if (mounted) router.push("/");
+        } finally {
+          initialCheckDone = true;
+        }
+      };
+      run();
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (!initialCheckDone) return;
         if (!user) {
           demoAuth.clearFirebaseProfile();
           router.push("/");
           return;
         }
-        try {
-          let profile = await getUserProfile(user.uid);
-          if (!profile) {
-            // Crear perfil por defecto para usuarios nuevos
-            profile = {
-              email: user.email ?? "",
-              name: user.displayName ?? user.email?.split("@")[0],
-              role: "store_user",
-              storeIds: ["default"],
-            };
-            await setUserProfile(user.uid, profile);
-          }
-          demoAuth.setFirebaseProfile(profile);
-        } catch (e) {
-          console.error("Error cargando perfil:", e);
-          demoAuth.clearFirebaseProfile();
-          router.push("/");
-          return;
-        }
-        setLoading(false);
+        const ok = await loadFirebaseUserAndProfile();
+        if (mounted && ok) setLoading(false);
       });
-      return () => unsubscribe();
+      return () => {
+        mounted = false;
+        unsubscribe();
+      };
     } else {
       // Usar modo demo
       const checkDemoAuth = () => {
