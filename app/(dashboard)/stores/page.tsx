@@ -26,6 +26,7 @@ import {
   deleteStore,
   initStoreProducts,
 } from "@/lib/firestore";
+import { localStores } from "@/lib/localStores";
 import type { Store as StoreType } from "@/lib/types";
 
 export default function StoresPage() {
@@ -38,6 +39,8 @@ export default function StoresPage() {
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const isAdmin = demoAuth.getCurrentUser()?.role === "admin";
+  // En modo demo (sin Firebase) permitir gestionar tiendas a todos los usuarios
+  const canManageStores = useFirebase ? isAdmin : true;
 
   useEffect(() => {
     loadStores();
@@ -47,9 +50,8 @@ export default function StoresPage() {
     const fallbackToDemo = () => {
       const user = demoAuth.getCurrentUser();
       const storeName = user?.storeName ?? "Tienda principal";
-      setStores([
-        { id: "default", name: storeName, createdAt: new Date() },
-      ]);
+      const local = localStores.ensureDefault(storeName);
+      setStores(local);
     };
 
     try {
@@ -79,12 +81,17 @@ export default function StoresPage() {
   };
 
   const handleAdd = async () => {
-    if (!formName.trim() || !useFirebase) return;
+    if (!formName.trim()) return;
     setActionLoading(true);
     try {
-      const store = await createStore(formName.trim(), formAddress.trim() || undefined);
-      await initStoreProducts(store.id);
-      setStores((prev) => [...prev, store]);
+      if (useFirebase) {
+        const store = await createStore(formName.trim(), formAddress.trim() || undefined);
+        await initStoreProducts(store.id);
+        setStores((prev) => [...prev, store]);
+      } else {
+        const store = localStores.create(formName.trim(), formAddress.trim() || undefined);
+        setStores((prev) => [...prev, store]);
+      }
       setModal(null);
       setFormName("");
       setFormAddress("");
@@ -97,13 +104,20 @@ export default function StoresPage() {
   };
 
   const handleEdit = async () => {
-    if (!editingStore || !formName.trim() || !useFirebase) return;
+    if (!editingStore || !formName.trim()) return;
     setActionLoading(true);
     try {
-      await updateStore(editingStore.id, {
-        name: formName.trim(),
-        address: formAddress.trim() || undefined,
-      });
+      if (useFirebase) {
+        await updateStore(editingStore.id, {
+          name: formName.trim(),
+          address: formAddress.trim() || undefined,
+        });
+      } else {
+        localStores.update(editingStore.id, {
+          name: formName.trim(),
+          address: formAddress.trim() || undefined,
+        });
+      }
       setStores((prev) =>
         prev.map((s) =>
           s.id === editingStore.id
@@ -124,12 +138,15 @@ export default function StoresPage() {
   };
 
   const handleDelete = async (store: StoreType) => {
-    if (!confirm(`¿Eliminar la tienda "${store.name}"? Se borrarán todos los productos, ventas y movimientos.`))
+    if (!confirm(`¿Eliminar la tienda "${store.name}"?` + (useFirebase ? " Se borrarán todos los productos, ventas y movimientos." : "")))
       return;
-    if (!useFirebase) return;
     setActionLoading(true);
     try {
-      await deleteStore(store.id);
+      if (useFirebase) {
+        await deleteStore(store.id);
+      } else {
+        localStores.delete(store.id);
+      }
       setStores((prev) => prev.filter((s) => s.id !== store.id));
     } catch (e) {
       console.error(e);
@@ -191,7 +208,7 @@ export default function StoresPage() {
               Modo gerente
             </Link>
           )}
-          {isAdmin && useFirebase && (
+          {canManageStores && (
             <button
               type="button"
               onClick={() => {
@@ -213,7 +230,7 @@ export default function StoresPage() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Store className="w-12 h-12 text-slate-300 mb-4" />
             <p className="text-slate-500 mb-2">No hay tiendas</p>
-            {isAdmin && useFirebase ? (
+            {canManageStores ? (
               <button
                 type="button"
                 onClick={() => {
@@ -252,7 +269,7 @@ export default function StoresPage() {
                       <LogIn className="w-4 h-4" />
                       Entrar
                     </button>
-                    {isAdmin && useFirebase && (
+                    {canManageStores && (
                       <>
                         <button
                           type="button"
