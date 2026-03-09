@@ -53,11 +53,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
           {/* Logo / Título */}
           <div className="flex-1 flex items-center min-w-0">
             <Link href="/caja" title="Ir a Punto de venta" className="flex items-center gap-2 shrink-0">
-              <img
-                src="/logo-servipartz.png"
-                alt="Servipartz"
-                className="h-8 sm:h-9 w-auto object-contain"
-              />
+              <span className="text-base sm:text-lg font-bold text-white tracking-tight">Servipartz</span>
               <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[120px]">
                 {storeStore.getStoreName() || demoAuth.getCurrentUser()?.storeName || "Tienda principal"}
               </span>

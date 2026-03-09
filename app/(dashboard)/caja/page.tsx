@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { useFirebase } from "@/lib/firebase";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
@@ -14,6 +15,7 @@ import { enqueueSale, processQueue, registerSaleLocally } from "@/lib/syncQueue"
 import { setLastSaleImport } from "@/lib/lastSaleImport";
 import { demoAuth } from "@/lib/demoAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
+import { getProductImageUrl } from "@/lib/productImages";
 import PaymentModal from "@/components/Caja/PaymentModal";
 import TicketPreview from "@/components/Caja/TicketPreview";
 import type { Bottle, PaymentMethod } from "@/lib/types";
@@ -314,8 +316,21 @@ export default function CajaPage() {
                 {filtered.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-1 p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200"
+                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200"
                   >
+                    <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
+                      {getProductImageUrl(item.id) ? (
+                        <Image
+                          src={getProductImageUrl(item.id)!}
+                          alt={item.name}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => addToCart(item)}
@@ -362,6 +377,19 @@ export default function CajaPage() {
                     key={c.id}
                     className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-100"
                   >
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
+                      {getProductImageUrl(c.id) ? (
+                        <Image
+                          src={getProductImageUrl(c.id)!}
+                          alt={c.name}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-5 h-5 text-slate-400" />
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-900 text-sm truncate">{c.name}</p>
                       <p className="text-xs text-slate-500">
