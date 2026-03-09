@@ -1,6 +1,6 @@
 /**
  * Historial de ventas para reportes: día, semana, mes y lo que más se vende.
- * Se alimenta al importar ventas (import-sales).
+ * Se alimenta desde la Caja al registrar ventas.
  */
 
 const SALES_HISTORY_KEY = "mibarra-sales-history";
@@ -33,7 +33,7 @@ function saveHistory(entries: SalesHistoryEntry[]) {
   }
 }
 
-/** Llamar desde import-sales después de aplicar ventas */
+/** Llamar desde Caja al registrar una venta */
 export function addSalesFromImport(
   applied: { bottleName: string; deducted: number; unit: "oz" | "units" }[],
   timestamp: Date

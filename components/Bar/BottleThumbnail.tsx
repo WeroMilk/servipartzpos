@@ -26,18 +26,11 @@ export default function BottleThumbnail({
   onDragEnd,
   isDragging = false,
 }: BottleThumbnailProps) {
-  const isCerveza = bottle.category.toLowerCase() === "cerveza";
-  const sizeUnits = bottle.sizeUnits ?? (isCerveza ? 100 : 1);
-  const currentUnits = bottle.currentUnits ?? (isCerveza ? Math.round(sizeUnits * (bottle.currentOz / bottle.size)) : 0);
+  const sizeUnits = bottle.sizeUnits ?? 100;
+  const currentUnits = bottle.currentUnits ?? Math.round(sizeUnits * (bottle.currentOz / bottle.size));
 
-  const mlToOz = (ml: number) => ml * 0.033814;
-  const sizeOz = mlToOz(bottle.size);
-  const currentOz = mlToOz(bottle.currentOz);
-
-  // Cerveza: nivel por unidades; resto: por porcentaje de ml
-  const percentage = isCerveza
-    ? (sizeUnits > 0 ? Math.min(100, (currentUnits / sizeUnits) * 100) : 0)
-    : Math.min(100, Math.max(0, (currentOz / sizeOz) * 100));
+  // Repuestos: nivel por unidades
+  const percentage = sizeUnits > 0 ? Math.min(100, (currentUnits / sizeUnits) * 100) : 0;
 
   const categoryColor = getCategoryColor(bottle.category);
   const outlineColor = getBottleOutlineColor(bottle.category);
@@ -50,18 +43,9 @@ export default function BottleThumbnail({
   };
   const badgeStyle = getBadgeStyle();
 
-  // Altura del líquido en el cuerpo de la botella
-  const bodyHeight = 40;
-  const liquidHeightPx = (percentage / 100) * bodyHeight;
-  const liquidTopY = 56 - liquidHeightPx;
-
-  // Servicios aprox. (solo en miniaturas, mismo criterio que vista principal)
+  // Unidades disponibles (repuestos)
   const portion = getPortionForCategory(bottle.category);
-  const serviciosAprox = portion > 0
-    ? (isCerveza
-        ? Math.floor(currentUnits / portion)
-        : Math.floor(currentOz / portion))
-    : 0;
+  const unidadesAprox = portion > 0 ? Math.floor(currentUnits / portion) : currentUnits;
 
   return (
     <motion.button
@@ -77,66 +61,44 @@ export default function BottleThumbnail({
           : "bg-white/60 hover:bg-white border-transparent hover:border-gray-300"
       } ${isDragging ? "opacity-50 cursor-grabbing" : draggable ? "cursor-grab" : ""}`}
     >
-      {/* Botella con líquido */}
+      {/* Icono de producto/repuesto (caja) */}
       <div className="relative w-10 h-14 sm:w-12 sm:h-16 flex items-end justify-center mb-1.5">
         <svg
-          viewBox="0 0 40 64"
+          viewBox="0 0 48 48"
           className="w-full h-full drop-shadow-sm"
           style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }}
         >
           <defs>
-            <linearGradient id={`liquid-${bottle.id}`} x1="0%" y1="100%" x2="0%" y2="0%">
+            <linearGradient id={`box-fill-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor={categoryColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={categoryColor} stopOpacity="0.5" />
-            </linearGradient>
-            <linearGradient id={`glass-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.5" />
-              <stop offset="50%" stopColor="#e2e8f0" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#f8fafc" stopOpacity="0.5" />
+              <stop offset="100%" stopColor={categoryColor} stopOpacity="0.6" />
             </linearGradient>
           </defs>
-          {/* Contorno botella: gris si líquido clarito, si no color categoría */}
+          {/* Caja/paquete de repuesto */}
           <path
-            d="M18 4 L18 12 L14 16 L14 56 Q14 60 20 60 L20 60 Q26 60 26 56 L26 16 L22 12 L22 4 Z"
-            fill="none"
+            d="M8 14 L24 6 L40 14 L40 34 L24 42 L8 34 Z"
+            fill={`url(#box-fill-${bottle.id})`}
             stroke={outlineColor}
-            strokeWidth="0.8"
+            strokeWidth="1"
             strokeLinejoin="round"
           />
-          {/* Cuerpo relleno (vidrio claro) */}
-          <path
-            d="M14 16 L26 16 L26 56 Q26 60 20 60 Q14 60 14 56 Z"
-            fill={`url(#glass-${bottle.id})`}
-          />
-          {/* Líquido desde abajo: color por categoría */}
-          <path
-            d={`M14 56 Q14 60 20 60 Q26 60 26 56 L26 ${liquidTopY} L14 ${liquidTopY} Z`}
-            fill={`url(#liquid-${bottle.id})`}
-          />
-          <line
-            x1="14"
-            y1={liquidTopY}
-            x2="26"
-            y2={liquidTopY}
-            stroke={categoryColor}
-            strokeWidth="0.6"
-            strokeOpacity="0.8"
-          />
+          <path d="M8 14 L24 22 L40 14" fill="none" stroke={outlineColor} strokeWidth="0.8" strokeOpacity="0.8" />
+          <path d="M24 6 L24 42" fill="none" stroke={outlineColor} strokeWidth="0.6" strokeOpacity="0.6" />
         </svg>
-        {/* Badge: cerveza = unidades, resto = porcentaje (color por nivel) */}
+        {/* Badge: unidades (color por nivel) */}
         <div
           className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 min-w-[28px] text-center text-[9px] font-bold py-0.5 px-1.5 rounded-full shadow ${badgeStyle.bg} ${badgeStyle.text}`}
         >
-          {isCerveza ? currentUnits : `${Math.round(percentage)}%`}
+          {currentUnits}
         </div>
       </div>
 
       {/* Nombre */}
       <p className="text-[10px] sm:text-xs font-semibold text-center max-w-[52px] sm:max-w-[56px] truncate text-gray-700">
-        {bottle.name.split(" ")[0]}
+        {bottle.name.split(" ").slice(0, 2).join(" ")}
       </p>
       <p className="text-[8px] sm:text-[9px] text-apple-text2 text-center">
-        ~{serviciosAprox} serv.
+        {unidadesAprox} unid
       </p>
     </motion.button>
   );

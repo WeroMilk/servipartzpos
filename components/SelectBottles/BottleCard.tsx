@@ -11,20 +11,19 @@ interface BottleCardProps {
   onClick: () => void;
 }
 
-function BottleIconSvg({ bottle, categoryColor }: { bottle: Bottle; categoryColor: string }) {
-  const gradId = `bottleGrad-${bottle.id}`;
+function ProductIconSvg({ bottle, categoryColor }: { bottle: Bottle; categoryColor: string }) {
+  const gradId = `productGrad-${bottle.id}`;
   const shadowId = `shadow-${bottle.id}`;
   return (
-    <svg width="140" height="220" viewBox="0 0 140 220" className="max-h-full w-auto max-w-full object-contain drop-shadow-md" aria-hidden>
+    <svg width="80" height="80" viewBox="0 0 80 80" className="max-h-full w-auto max-w-full object-contain drop-shadow-md" aria-hidden>
       <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={categoryColor} stopOpacity={0.3} />
-          <stop offset="50%" stopColor={categoryColor} stopOpacity={0.5} />
-          <stop offset="100%" stopColor={categoryColor} stopOpacity={0.2} />
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={categoryColor} stopOpacity={0.9} />
+          <stop offset="100%" stopColor={categoryColor} stopOpacity={0.5} />
         </linearGradient>
         <filter id={shadowId}>
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-          <feOffset dx="0" dy="2" result="offsetblur" />
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+          <feOffset dx="0" dy="1" result="offsetblur" />
           <feComponentTransfer>
             <feFuncA type="linear" slope="0.3" />
           </feComponentTransfer>
@@ -34,13 +33,18 @@ function BottleIconSvg({ bottle, categoryColor }: { bottle: Bottle; categoryColo
           </feMerge>
         </filter>
       </defs>
-      <ellipse cx="70" cy="210" rx="35" ry="8" fill="#000" opacity={0.1} />
-      <rect x="50" y="15" width="40" height="180" rx="8" fill={`url(#${gradId})`} filter={`url(#${shadowId})`} />
-      <rect x="55" y="20" width="30" height="170" rx="6" fill={categoryColor} opacity={0.4} />
-      <rect x="60" y="80" width="20" height="30" rx="2" fill="#fff" opacity={0.9} />
-      <rect x="62" y="82" width="16" height="26" rx="1" fill={categoryColor} opacity={0.1} />
-      <rect x="65" y="8" width="10" height="12" rx="2" fill="#8B7355" opacity={0.8} />
-      <rect x="58" y="25" width="8" height="140" rx="2" fill="#fff" opacity={0.2} />
+      {/* Caja/paquete de repuesto */}
+      <path
+        d="M15 25 L40 10 L65 25 L65 55 L40 70 L15 55 Z"
+        fill={`url(#${gradId})`}
+        filter={`url(#${shadowId})`}
+        stroke={categoryColor}
+        strokeWidth="1.5"
+        strokeOpacity="0.8"
+        strokeLinejoin="round"
+      />
+      <path d="M15 25 L40 40 L65 25" fill="none" stroke={categoryColor} strokeWidth="1" strokeOpacity="0.6" />
+      <path d="M40 10 L40 70" fill="none" stroke={categoryColor} strokeWidth="0.8" strokeOpacity="0.5" />
     </svg>
   );
 }
@@ -91,12 +95,12 @@ export default function BottleCard({ bottle, isSelected, onClick }: BottleCardPr
               unoptimized
             />
           ) : (
-            <BottleIconSvg bottle={bottle} categoryColor={categoryColor} />
+            <ProductIconSvg bottle={bottle} categoryColor={categoryColor} />
           )}
         </div>
 
         <p className="text-[9px] min-[380px]:text-[10px] text-apple-text2 flex-shrink-0 mt-0.5 leading-none">
-          {bottle.size} ml
+          {bottle.sizeUnits ?? 0} unid
         </p>
       </div>
     </button>

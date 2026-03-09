@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Package, Bell, Settings, FileSpreadsheet, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3 } from "lucide-react";
+import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LogoutButton from "@/components/Auth/LogoutButton";
 import { demoAuth } from "@/lib/demoAuth";
@@ -18,7 +18,6 @@ const NAV_ITEMS = [
   { href: "/bar", icon: Package, label: "Inventario" },
   { href: "/caja", icon: ShoppingCart, label: "Caja" },
   { href: "/movements", icon: Bell, label: "Movimientos" },
-  { href: "/import-sales", icon: FileSpreadsheet, label: "Importar ventas" },
   { href: "/report", icon: DollarSign, label: "Reporte de ventas" },
   { href: "/import-order", icon: PackageOpen, label: "Importar pedido" },
   { href: "/config", icon: Settings, label: "Configuraciones" },

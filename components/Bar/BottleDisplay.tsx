@@ -265,23 +265,11 @@ export default function BottleDisplay({
   const categoryColor = getCategoryColor(bottle.category);
   const outlineColor = getBottleOutlineColor(bottle.category);
 
-  // Servicios aprox. según porción guardada por categoría
-  const portionPerService = getPortionForCategory(bottle.category);
-  const serviciosAprox = portionPerService > 0
-    ? (useUnits
-        ? Math.floor(remainingUnits / portionPerService)
-        : Math.floor(remaining / portionPerService))
-    : 0;
-
-  const bodyHeight = 40;
-  const liquidHeightPx = (percentage / 100) * bodyHeight;
-  const liquidTopY = 56 - liquidHeightPx;
-
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
-      {/* [ Izquierda: Inventario/Verificar | Centro: Título + Botella (siempre centrados) | Derecha: Porción ] */}
+      {/* [ Izquierda: Inventario/Verificar | Centro: Título + Producto (siempre centrados) | Derecha: Porción ] */}
       <div className="flex-1 flex items-center justify-center gap-2 sm:gap-3 md:gap-6 px-2 sm:px-3 py-2 min-h-0 min-w-0 overflow-hidden">
-        {/* Izquierda: a la misma altura que la botella */}
+        {/* Izquierda: a la misma altura que el producto */}
         <div className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 sm:gap-2 min-w-0">
           {onStartInventory != null && inventoryTotal > 0 && (
             inventoryActive ? (
@@ -311,7 +299,7 @@ export default function BottleDisplay({
           />
         </div>
 
-        {/* Centro: título + botella siempre en el mismo eje, centrados en todas las vistas */}
+        {/* Centro: título + producto siempre en el mismo eje, centrados en todas las vistas */}
         <motion.div
           initial={{ scale: 0.98, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -328,46 +316,26 @@ export default function BottleDisplay({
           </div>
           <div className="relative flex flex-col items-center justify-center min-h-[140px] min-[400px]:min-h-[160px] sm:min-h-[180px] flex-shrink-0">
             <svg
-              viewBox="0 0 40 64"
+              viewBox="0 0 48 48"
               className="w-auto h-[140px] min-[400px]:h-[160px] sm:h-[180px] md:h-[200px] drop-shadow-xl flex-shrink-0"
               style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.15))" }}
             >
               <defs>
-                <linearGradient id={`liquid-center-${bottle.id}`} x1="0%" y1="100%" x2="0%" y2="0%">
+                <linearGradient id={`box-center-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor={categoryColor} stopOpacity="0.9" />
-                  <stop offset="100%" stopColor={categoryColor} stopOpacity="0.5" />
-                </linearGradient>
-                <linearGradient id={`glass-center-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f8fafc" stopOpacity="0.5" />
-                  <stop offset="50%" stopColor="#e2e8f0" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#f8fafc" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor={categoryColor} stopOpacity="0.6" />
                 </linearGradient>
               </defs>
-              {/* Contorno: gris si líquido clarito, si no color categoría; líquido siempre color categoría */}
+              {/* Caja/paquete de repuesto */}
               <path
-                d="M18 4 L18 12 L14 16 L14 56 Q14 60 20 60 L20 60 Q26 60 26 56 L26 16 L22 12 L22 4 Z"
-                fill="none"
+                d="M8 14 L24 6 L40 14 L40 34 L24 42 L8 34 Z"
+                fill={`url(#box-center-${bottle.id})`}
                 stroke={outlineColor}
                 strokeWidth="1.2"
                 strokeLinejoin="round"
               />
-              <path
-                d="M14 16 L26 16 L26 56 Q26 60 20 60 Q14 60 14 56 Z"
-                fill={`url(#glass-center-${bottle.id})`}
-              />
-              <path
-                d={`M14 56 Q14 60 20 60 Q26 60 26 56 L26 ${liquidTopY} L14 ${liquidTopY} Z`}
-                fill={`url(#liquid-center-${bottle.id})`}
-              />
-              <line
-                x1="14"
-                y1={liquidTopY}
-                x2="26"
-                y2={liquidTopY}
-                stroke={categoryColor}
-                strokeWidth="0.8"
-                strokeOpacity="0.8"
-              />
+              <path d="M8 14 L24 22 L40 14" fill="none" stroke={outlineColor} strokeWidth="1" strokeOpacity="0.8" />
+              <path d="M24 6 L24 42" fill="none" stroke={outlineColor} strokeWidth="0.8" strokeOpacity="0.6" />
             </svg>
             {/* Badge porcentaje/unidades: azul como la página */}
             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 min-w-[36px] text-center text-xs font-bold py-1 px-2 rounded-full shadow bg-apple-surface border border-apple-border text-apple-accent">

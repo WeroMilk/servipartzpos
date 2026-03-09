@@ -156,7 +156,7 @@ export default function ImportOrderPage() {
             {templateLoading ? "Generando…" : "Descargar plantilla Excel"}
           </button>
           <p className="text-xs text-apple-text2">
-            La plantilla tiene columna <strong>Producto</strong> (lista con tus bebidas) y <strong>Cantidad</strong> (solo números enteros). Licores: cantidad en oz. Cerveza: en unidades.
+            La plantilla tiene columna <strong>Producto</strong> (lista con tus repuestos) y <strong>Cantidad</strong> (solo números enteros).
           </p>
           <a
             href="/plantilla-ingreso-pedido.csv"
@@ -190,7 +190,7 @@ export default function ImportOrderPage() {
         <div className="bg-orange-50 rounded-xl border border-orange-200 p-4">
           <h3 className="font-semibold text-apple-text text-sm mb-1">Formato del archivo</h3>
           <p className="text-xs text-apple-text">
-            La plantilla tiene las columnas <strong>Producto</strong> y <strong>Cantidad</strong>. Escribe el nombre del producto exactamente como aparece en tu inventario (Barra). Para licores usa cantidad en oz; para cerveza, en unidades.
+            La plantilla tiene las columnas <strong>Producto</strong> y <strong>Cantidad</strong>. Escribe el nombre del repuesto exactamente como aparece en tu inventario.
           </p>
         </div>
       </div>

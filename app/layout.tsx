@@ -20,7 +20,7 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Servipartz POS - Sistema de punto de venta",
+  title: "Servipartz - Punto de Venta",
   description: "Control de inventario y ventas multi-tienda",
   icons: { icon: "/favicon.png", shortcut: "/favicon.png", apple: "/favicon.png" },
   manifest: "/manifest.webmanifest",

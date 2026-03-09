@@ -325,7 +325,7 @@ export default function SelectBottlesPage() {
                 <span className="flex items-center gap-2 flex-1 justify-center min-w-0 flex-wrap">
                   <span>Continuar con</span>
                   <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                    {selectedBottles.size} {selectedBottles.size === 1 ? "botella" : "botellas"}
+                    {selectedBottles.size} {selectedBottles.size === 1 ? "producto" : "productos"}
                     <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" strokeWidth={2.5} />
                   </span>
                 </span>

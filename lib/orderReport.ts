@@ -37,15 +37,17 @@ export interface OrderReportLine {
 
 export function buildOrderReport(bottles: Bottle[]): { text: string; lines: OrderReportLine[] } {
   const lines: OrderReportLine[] = [];
-  const barName = typeof window !== "undefined"
+  const storeName = typeof window !== "undefined"
     ? (() => {
         try {
+          const name = localStorage.getItem("pos_current_store_name");
+          if (name) return name;
           const u = localStorage.getItem("demo_user");
-          if (u) return (JSON.parse(u) as { barName?: string }).barName ?? "Mi Barra";
+          if (u) return (JSON.parse(u) as { barName?: string }).barName ?? "Servipartz";
         } catch {}
-        return "Mi Barra";
+        return "Servipartz";
       })()
-    : "Mi Barra";
+    : "Servipartz";
 
   const porPedir: OrderReportLine[] = [];
   const bajo25: OrderReportLine[] = [];
@@ -70,7 +72,7 @@ export function buildOrderReport(bottles: Bottle[]): { text: string; lines: Orde
     }
   }
 
-  // Eliminar duplicados: si una botella está en por pedir y también bajo 25%, solo en por pedir (o en ambos con una sola línea)
+  // Eliminar duplicados: si un producto está en por pedir y también bajo 25%, solo en por pedir (o en ambos con una sola línea)
   const bajo25SinRepetir = bajo25.filter(
     (b) => !porPedir.some((p) => p.name === b.name)
   );
@@ -84,7 +86,7 @@ export function buildOrderReport(bottles: Bottle[]): { text: string; lines: Orde
     minute: "2-digit",
   });
 
-  let text = `PEDIDO - ${barName}\n`;
+  let text = `PEDIDO - ${storeName}\n`;
   text += `Generado: ${dateStr}\n`;
   text += `${"=".repeat(32)}\n\n`;
 
@@ -105,10 +107,10 @@ export function buildOrderReport(bottles: Bottle[]): { text: string; lines: Orde
   }
 
   if (lines.length === 0) {
-    text += "No hay botellas por pedir ni por debajo del 25%. Barra bien surtida.\n";
+    text += "No hay productos por pedir ni por debajo del 25%. Inventario completo.\n";
   }
 
-  text += "\n--- MiBarra ---";
+  text += "\n--- Servipartz ---";
 
   return { text, lines };
 }

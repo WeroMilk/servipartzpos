@@ -99,7 +99,6 @@ export default function PortionSelector({
         </div>
         <p className="text-[8px] min-[400px]:text-[9px] sm:text-[10px] text-apple-text2 text-center max-w-[56px] sm:max-w-[70px] leading-tight">
           {selectedPortion} {unitShort}/venta
-          {selectedPortion} {unitShort}/serv
         </p>
       </div>
 

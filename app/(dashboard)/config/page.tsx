@@ -37,7 +37,7 @@ export default function ConfigPage() {
   const handleGenerateOrder = () => {
     const bottles = loadBarBottles();
     if (bottles.length === 0) {
-      alert("No hay productos en tu inventario. Añade productos en Mi inventario primero.");
+      alert("No hay productos en tu inventario. Añade productos en Modifica tu inventario primero.");
       return;
     }
     const { text } = buildOrderReport(bottles);
@@ -47,7 +47,7 @@ export default function ConfigPage() {
   };
 
   const handleDownloadOrder = () => {
-    const name = `pedido-mibarra-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.txt`;
+    const name = `pedido-servipartz-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.txt`;
     const blob = new Blob([orderReportText], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

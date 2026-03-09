@@ -1,6 +1,6 @@
-# MiBarra
+# Servipartz POS
 
-Aplicación web para gestión de inventario de botellas y cervezas en bares.
+Sistema de punto de venta multi-sucursal para repuestos de electrodomésticos.
 
 ## Tecnologías
 

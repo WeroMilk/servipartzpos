@@ -175,7 +175,7 @@ export default function BarPage() {
     movementsService.add({
       type: "sort_change",
       bottleId: "_",
-      bottleName: "Mi Barra",
+      bottleName: "Inventario",
       newValue: 0,
       userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
       description: `Orden de lista: ${getSortLabel(newSort)}`,
@@ -207,10 +207,10 @@ export default function BarPage() {
       movementsService.add({
         type: "bottles_reorder",
         bottleId: "_",
-        bottleName: "Mi Barra",
+        bottleName: "Inventario",
         newValue: 0,
         userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
-        description: "Orden de botellas actualizado",
+        description: "Orden de productos actualizado",
       });
     }
     setIsDragging(false);

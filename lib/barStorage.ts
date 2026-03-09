@@ -1,7 +1,7 @@
 import { Bottle } from "./types";
 
-/** Clave de localStorage donde se guarda el inventario seleccionado (Mi Inventario → Mi Barra). */
-export const BAR_BOTTLES_KEY = "barra-bar-bottles";
+/** Clave de localStorage donde se guarda el inventario de la tienda (Servipartz POS). */
+export const BAR_BOTTLES_KEY = "servipartz-pos-inventory";
 
 /**
  * Carga las botellas del bar desde localStorage.

@@ -171,21 +171,21 @@ export async function getStoreSales(storeId: string, maxDays = 90): Promise<Sale
   cutoff.setDate(cutoff.getDate() - maxDays);
   const q = query(ref, orderBy("timestamp", "desc"), limit(500));
   const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => {
-      const data = d.data();
-      const ts = toDate(data.timestamp);
-      if (ts < cutoff) return null;
-      return {
-        id: d.id,
-        items: (data.items || []) as SaleItem[],
-        total: data.total ?? 0,
-        timestamp: ts,
-        employeeId: data.employeeId,
-        employeeName: data.employeeName,
-      };
-    })
-    .filter((s): s is Sale => s !== null);
+  const sales: Sale[] = [];
+  for (const d of snap.docs) {
+    const data = d.data();
+    const ts = toDate(data.timestamp);
+    if (ts < cutoff) continue;
+    sales.push({
+      id: d.id,
+      items: (data.items || []) as SaleItem[],
+      total: data.total ?? 0,
+      timestamp: ts,
+      employeeId: data.employeeId,
+      employeeName: data.employeeName,
+    });
+  }
+  return sales;
 }
 
 /** Obtiene ventas de todas las tiendas (para admin) */
