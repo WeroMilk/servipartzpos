@@ -19,12 +19,32 @@ export const viewport = {
   themeColor: "#1d4ed8",
 };
 
+const siteUrl =
+  typeof process.env.NEXT_PUBLIC_SITE_URL === "string" && process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SITE_URL
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://servipartzpos.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Servipartz - Punto de Venta",
   description: "Control de inventario y ventas multi-tienda",
   icons: { icon: "/favicon.png", shortcut: "/favicon.png", apple: "/favicon.png" },
   manifest: "/manifest.webmanifest",
   other: { "mobile-web-app-capable": "yes" },
+  openGraph: {
+    title: "Servipartz - Punto de Venta",
+    description: "Control de inventario y ventas multi-tienda",
+    images: ["/og-image.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Servipartz - Punto de Venta",
+    description: "Control de inventario y ventas multi-tienda",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
