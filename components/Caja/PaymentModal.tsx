@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Banknote, CreditCard, Smartphone, X, Plus, Trash2 } from "lucide-react";
 import type { PaymentMethod, PaymentSplit } from "@/lib/types";
 
@@ -34,6 +34,17 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
   ]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Cuando hay un solo pago en efectivo, el monto viene automático desde la caja
+  const isSingleEfectivo = rows.length === 1 && rows[0]?.method === "efectivo";
+  useEffect(() => {
+    setRows((prev) => {
+      if (prev.length === 1 && prev[0]?.method === "efectivo") {
+        return prev.map((r, i) => (i === 0 ? { ...r, amount: total.toFixed(2) } : r));
+      }
+      return prev;
+    });
+  }, [total]);
 
   const addRow = () => {
     setRows((prev) => [
@@ -140,13 +151,18 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
                     <div className="flex gap-2">
                       <select
                         value={row.method}
-                        onChange={(e) =>
-                          updateRow(row.id, {
-                            method: e.target.value as PaymentMethod,
+                        onChange={(e) => {
+                          const newMethod = e.target.value as PaymentMethod;
+                          const updates: Partial<PaymentRow> = {
+                            method: newMethod,
                             cardType: undefined,
                             amountReceived: undefined,
-                          })
-                        }
+                          };
+                          if (rows.length === 1 && newMethod === "efectivo") {
+                            updates.amount = total.toFixed(2);
+                          }
+                          updateRow(row.id, updates);
+                        }}
                         className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg"
                       >
                         <option value="efectivo">Efectivo</option>
@@ -197,7 +213,8 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
                         placeholder="Monto"
                         value={row.amount}
                         onChange={(e) => updateRow(row.id, { amount: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                        readOnly={row.method === "efectivo" && isSingleEfectivo}
+                        className={`w-full px-3 py-2 text-sm border border-slate-200 rounded-lg ${row.method === "efectivo" && isSingleEfectivo ? "bg-slate-100 cursor-not-allowed" : ""}`}
                       />
                       {row.method === "efectivo" && (
                         <input
@@ -206,7 +223,7 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
                           placeholder="Recibido (para cambio)"
                           value={row.amountReceived ?? ""}
                           onChange={(e) => updateRow(row.id, { amountReceived: e.target.value })}
-                          className="w-full mt-1 px-3 py-2 text-xs border border-slate-200 rounded-lg"
+                          className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg"
                         />
                       )}
                     </div>
@@ -222,8 +239,9 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
               ${totalPaid.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </span>
           </div>
+
           {change > 0 && (
-            <p className="text-sm font-semibold text-emerald-600">
+            <p className="text-base font-bold text-emerald-600">
               Cambio a devolver: ${change.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </p>
           )}

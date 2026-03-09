@@ -26,16 +26,23 @@ export function buildTicketHtml(data: TicketData): string {
     minute: "2-digit",
   });
   const ticketNum = String(data.ticketNumber).padStart(6, "0");
+  const LINE_WIDTH = 40;
+  const centerLine = (text: string) => {
+    const len = text.length;
+    if (len >= LINE_WIDTH) return text.slice(0, LINE_WIDTH);
+    const pad = Math.floor((LINE_WIDTH - len) / 2);
+    return " ".repeat(pad) + text + " ".repeat(LINE_WIDTH - pad - len);
+  };
 
   const lines: string[] = [];
-  lines.push("========================================");
-  lines.push(`        ${SERVIPARTZ_INFO.name}`);
-  lines.push(`  ${SERVIPARTZ_INFO.tagline}`);
-  lines.push("========================================");
+  lines.push("=".repeat(LINE_WIDTH));
+  lines.push(centerLine(SERVIPARTZ_INFO.name));
+  lines.push(centerLine(SERVIPARTZ_INFO.tagline));
+  lines.push("=".repeat(LINE_WIDTH));
   lines.push(SERVIPARTZ_INFO.address);
   lines.push(SERVIPARTZ_INFO.city);
   lines.push(`Tel: ${SERVIPARTZ_INFO.phone}`);
-  lines.push("========================================");
+  lines.push("=".repeat(LINE_WIDTH));
   lines.push(`Ticket #${ticketNum}`);
   lines.push(`Fecha: ${dateStr}`);
   if (data.employeeName) lines.push(`Cajero: ${data.employeeName}`);
@@ -83,12 +90,12 @@ export function buildTicketHtml(data: TicketData): string {
     lines.push(`Recibido:            $${data.amountReceived.toFixed(2)}`);
     if (data.change != null) lines.push(`Cambio:              $${data.change.toFixed(2)}`);
   }
-  lines.push("========================================");
-  lines.push("   Gracias por su compra");
+  lines.push("=".repeat(LINE_WIDTH));
+  lines.push(centerLine("Gracias por su compra"));
   for (const h of SERVIPARTZ_INFO.hours.split("\n")) {
-    lines.push(`   ${h}`);
+    lines.push(centerLine(h));
   }
-  lines.push("========================================");
+  lines.push("=".repeat(LINE_WIDTH));
 
   const escapedLines = lines.map((line) => line.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
   const linesHtml = escapedLines.map((line) => `<div class="ticket-line">${line}</div>`).join("\n");
