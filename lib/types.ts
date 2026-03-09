@@ -35,7 +35,7 @@ export interface SaleItem {
   price?: number;
 }
 
-export type PaymentMethod = "efectivo" | "tarjeta" | "transferencia";
+export type PaymentMethod = "efectivo" | "tarjeta" | "tarjeta_debito" | "tarjeta_credito" | "transferencia";
 
 /** Venta registrada */
 export interface Sale {
@@ -63,7 +63,7 @@ export interface Movement {
   userName: string;
 }
 
-// --- Compatibilidad con MiBarra (se depreca gradualmente) ---
+// --- Tipos de producto e inventario ---
 export interface Bottle {
   id: string;
   name: string;
@@ -84,6 +84,7 @@ export interface Category {
   icon?: string;
 }
 
+/** @deprecated Usar storeStore y firestore para tiendas. */
 export interface Bar {
   id: string;
   userId: string;

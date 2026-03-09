@@ -14,7 +14,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db, useFirebase } from "./firebase";
-import type { Product, Store, Sale, SaleItem, Movement } from "./types";
+import type { Product, Store, Sale, SaleItem, Movement, PaymentMethod } from "./types";
 import { getDefaultProductsWithStock } from "./productsData";
 
 /** Convierte Firestore Timestamp a Date */
@@ -151,7 +151,7 @@ export async function addSale(
   total: number,
   employeeId?: string,
   employeeName?: string,
-  options?: { paymentMethod?: "efectivo" | "tarjeta" | "transferencia"; amountReceived?: number; change?: number; ticketNumber?: number }
+  options?: { paymentMethod?: PaymentMethod; amountReceived?: number; change?: number; ticketNumber?: number }
 ): Promise<string> {
   if (!db || !useFirebase) throw new Error("Firebase no configurado");
   const ref = collection(db, "stores", storeId, "sales");

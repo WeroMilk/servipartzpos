@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import BottleDisplay from "@/components/Bar/BottleDisplay";
-import BottleThumbnail from "@/components/Bar/BottleThumbnail";
+import BottleDisplay from "@/components/Inventory/BottleDisplay";
+import BottleThumbnail from "@/components/Inventory/BottleThumbnail";
 import { categories } from "@/lib/bottlesData";
-import { loadBarBottles } from "@/lib/barStorage";
+import { loadInventory } from "@/lib/inventoryStorage";
 import { getLastInventoryComplete, setLastInventoryComplete, LAST_INVENTORY_COMPLETE_EVENT } from "@/lib/lastInventoryComplete";
 import { Bottle } from "@/lib/types";
 import { movementsService, notificationsService } from "@/lib/movements";
@@ -14,17 +14,17 @@ import confetti from "canvas-confetti";
 
 type SortOption = "name-asc" | "quantity-desc" | "quantity-asc" | "custom";
 
-export default function BarPage() {
+export default function InventarioPage() {
   const [bottles, setBottles] = useState<Bottle[]>(() =>
-    typeof window !== "undefined" ? loadBarBottles() : []
+    typeof window !== "undefined" ? loadInventory() : []
   );
   useEffect(() => {
-    setBottles(loadBarBottles());
+    setBottles(loadInventory());
   }, []);
 
-  // Re-sincronizar con Mi Inventario al volver a esta pantalla (p. ej. tras editar inventario)
+  // Re-sincronizar con inventario al volver a esta pantalla (p. ej. tras editar inventario)
   useEffect(() => {
-    const sync = () => setBottles(loadBarBottles());
+    const sync = () => setBottles(loadInventory());
     window.addEventListener("focus", sync);
     return () => window.removeEventListener("focus", sync);
   }, []);
@@ -39,7 +39,7 @@ export default function BarPage() {
   const thumbnailScrollRef = useRef<HTMLDivElement>(null);
   const dragStartIndex = useRef<number | null>(null);
 
-  // Inventario completo: contar botellas revisadas (✓ o ✗) hasta completar
+  // Inventario completo: contar productos revisados (✓ o ✗) hasta completar
   const [inventoryActive, setInventoryActive] = useState(false);
   const [inventoryReviewedIds, setInventoryReviewedIds] = useState<Set<string>>(new Set());
   const inventoryCompletedRef = useRef(false);
@@ -130,7 +130,6 @@ export default function BarPage() {
       fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
       fire(0.1, { spread: 120, startVelocity: 45 });
     };
-    // Pequeño retraso para que el confeti se dispare tras el re-render y se vea bien
     setTimeout(runConfetti, 100);
     movementsService.add({
       type: "inventory_complete",
@@ -153,8 +152,6 @@ export default function BarPage() {
   }, [activeIndex, displayBottles]);
 
   const scrollToIndex = useCallback((index: number) => setActiveIndex(index), []);
-
-  // Cambio de bebida solo desde el scroll de miniaturas abajo (no swipe en el centro)
 
   const getSortLabel = (opt: SortOption) => {
     switch (opt) {
@@ -225,7 +222,7 @@ export default function BarPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Selector de categoría (mismo padding que resto del dashboard) */}
+      {/* Selector de categoría */}
       <div className="flex-shrink-0 px-4 pt-1.5 pb-1.5 bg-apple-surface border-b border-apple-border">
         <div className="w-full min-w-0 max-w-3xl sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
           <button
@@ -256,7 +253,6 @@ export default function BarPage() {
         </div>
       </div>
 
-      {/* Móvil: último inventario centrado debajo de las categorías */}
       <div className="flex-shrink-0 md:hidden py-1.5 px-4 text-center">
         <span className="text-[10px] text-apple-text2">Último inventario: {lastInventory}</span>
       </div>

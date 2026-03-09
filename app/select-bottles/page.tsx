@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/Auth/AuthGuard";
 import { categories, defaultBottles } from "@/lib/bottlesData";
-import { saveBarBottles } from "@/lib/barStorage";
+import { saveInventory } from "@/lib/inventoryStorage";
 import { movementsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { Bottle } from "@/lib/types";
@@ -88,7 +88,7 @@ export default function SelectBottlesPage() {
       return;
     }
     const barBottles = defaultBottles.filter((b) => selectedBottles.has(b.id));
-    saveBarBottles(barBottles);
+    saveInventory(barBottles);
     movementsService.add({
       type: "inventory_list_updated",
       bottleId: "_",
@@ -97,7 +97,7 @@ export default function SelectBottlesPage() {
       userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
       description: `Inventario actualizado: ${barBottles.length} productos`,
     });
-    router.push("/bar");
+    router.push("/inventario");
   };
 
   const filteredBottles = selectedCategory

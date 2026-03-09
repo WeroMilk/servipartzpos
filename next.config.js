@@ -3,7 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   eslint: { ignoreDuringBuilds: true },
   async redirects() {
-    return [{ source: '/connect-softrestaurant', destination: '/set-bar-name', permanent: true }];
+    return [
+      { source: '/connect-softrestaurant', destination: '/set-store-name', permanent: true },
+      { source: '/set-bar-name', destination: '/set-store-name', permanent: true },
+      { source: '/bar', destination: '/inventario', permanent: true },
+    ];
   },
   async rewrites() {
     return [{ source: '/favicon.ico', destination: '/icon.svg' }];

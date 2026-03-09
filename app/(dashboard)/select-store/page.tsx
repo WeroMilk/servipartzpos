@@ -19,7 +19,7 @@ export default function SelectStorePage() {
     const storeIds = user?.storeIds ?? ["default"];
 
     if (storeIds.length === 1 && storeIds[0] === "default") {
-      storeStore.setStore("default", user?.barName || "Tienda principal");
+      storeStore.setStore("default", user?.storeName || "Tienda principal");
       router.replace("/caja");
       return;
     }
@@ -43,7 +43,7 @@ export default function SelectStorePage() {
       setStores(
         storeIds.map((id) => ({
           id,
-          name: id === "default" ? (user?.barName || "Tienda principal") : id,
+          name: id === "default" ? (user?.storeName || "Tienda principal") : id,
           createdAt: new Date(),
         }))
       );
@@ -53,7 +53,7 @@ export default function SelectStorePage() {
 
   const handleSelect = (store: StoreType) => {
     storeStore.setStore(store.id, store.name);
-    router.push("/bar");
+    router.push("/inventario");
   };
 
   if (loading) {

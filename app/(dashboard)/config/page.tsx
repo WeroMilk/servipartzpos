@@ -6,7 +6,7 @@ import { employeeAuth } from "@/lib/employeeAuth";
 import type { Employee } from "@/lib/employeeAuth";
 import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
-import { loadBarBottles } from "@/lib/barStorage";
+import { loadInventory } from "@/lib/inventoryStorage";
 import { buildOrderReport } from "@/lib/orderReport";
 import { Lock, Package, ShoppingCart, Download, MessageCircle, Check, Loader2, Store } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,7 +35,7 @@ export default function ConfigPage() {
   const [orderRecipient, setOrderRecipient] = useState(WHATSAPP_RECIPIENTS[0]?.value ?? "");
 
   const handleGenerateOrder = () => {
-    const bottles = loadBarBottles();
+    const bottles = loadInventory();
     if (bottles.length === 0) {
       alert("No hay productos en tu inventario. Añade productos en Modifica tu inventario primero.");
       return;

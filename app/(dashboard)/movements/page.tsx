@@ -64,7 +64,8 @@ export default function MovementsPage() {
       case "edit": return <Edit className="w-4 h-4 text-orange-500" />;
       case "portion_change": return <Settings className="w-4 h-4 text-purple-500" />;
       case "inventory_list_updated": return <Package className="w-4 h-4 text-indigo-500" />;
-      case "bar_name_change": return <Type className="w-4 h-4 text-slate-600" />;
+      case "bar_name_change":
+      case "store_name_change": return <Type className="w-4 h-4 text-slate-600" />;
       case "employee_password_change": return <Lock className="w-4 h-4 text-amber-600" />;
       case "last_update_date": return <Calendar className="w-4 h-4 text-amber-600" />;
       case "sales_import": return <FileSpreadsheet className="w-4 h-4 text-emerald-600" />;

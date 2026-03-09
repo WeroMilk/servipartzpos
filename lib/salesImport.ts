@@ -5,7 +5,7 @@
 import { Bottle } from "./types";
 import { isMeasuredInUnits } from "./measurementRules";
 
-const BAR_BOTTLES_KEY = "barra-bar-bottles";
+import { loadInventory, saveInventory } from "./inventoryStorage";
 
 export interface SalesRow {
   /** Nombre del producto (se hace match con bottle.name) */
@@ -15,25 +15,17 @@ export interface SalesRow {
 }
 
 /**
- * Obtiene las botellas actuales del bar desde localStorage.
+ * Obtiene el inventario actual desde localStorage.
  */
-export function getBarBottles(): Bottle[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(BAR_BOTTLES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Bottle[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+export function getInventoryBottles(): Bottle[] {
+  return loadInventory();
 }
 
 /**
- * Guarda las botellas actualizadas en localStorage.
+ * Guarda el inventario actualizado en localStorage.
  */
-export function saveBarBottles(bottles: Bottle[]): void {
-  localStorage.setItem(BAR_BOTTLES_KEY, JSON.stringify(bottles));
+export function saveInventoryBottles(bottles: Bottle[]): void {
+  saveInventory(bottles);
 }
 
 /**

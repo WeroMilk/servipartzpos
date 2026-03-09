@@ -51,7 +51,7 @@ body {
 }
 
 /* Pantalla tipo app: misma altura en iPhone y Android */
-.app-bar-view {
+.app-inventory-view {
   height: var(--app-height);
   height: 100dvh;
   max-height: 100dvh;

@@ -16,8 +16,10 @@ interface PaymentModalProps {
 
 export default function PaymentModal({ total, onConfirm, onClose }: PaymentModalProps) {
   const [method, setMethod] = useState<PaymentMethod>("efectivo");
+  const [cardType, setCardType] = useState<"debito" | "credito">("debito");
   const [amountReceived, setAmountReceived] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const amountNum = parseFloat(amountReceived.replace(",", ".")) || 0;
   const change = method === "efectivo" && amountNum >= total ? amountNum - total : 0;
@@ -25,13 +27,16 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
     method !== "efectivo" || (amountNum >= total && amountNum > 0);
 
   const handleConfirm = () => {
-    if (!canConfirm) {
-      setError(method === "efectivo" ? "El monto debe ser mayor o igual al total" : "");
+    if (submitting || !canConfirm) {
+      if (!canConfirm) setError(method === "efectivo" ? "El monto debe ser mayor o igual al total" : "");
       return;
     }
     setError("");
+    setSubmitting(true);
+    const finalMethod: PaymentMethod =
+      method === "tarjeta" ? (cardType === "debito" ? "tarjeta_debito" : "tarjeta_credito") : method;
     onConfirm({
-      method,
+      method: finalMethod,
       amountReceived: method === "efectivo" ? amountNum : undefined,
       change: method === "efectivo" ? change : undefined,
     });
@@ -102,6 +107,38 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
             </div>
           </div>
 
+          {method === "tarjeta" && (
+            <div>
+              <p className="text-sm font-medium text-slate-700 mb-2">¿Débito o crédito?</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCardType("debito")}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
+                    cardType === "debito"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <CreditCard className="w-6 h-6" />
+                  <span className="text-xs font-medium">Débito</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCardType("credito")}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
+                    cardType === "credito"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <CreditCard className="w-6 h-6" />
+                  <span className="text-xs font-medium">Crédito</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {method === "efectivo" && (
             <div>
               <label htmlFor="amount-received" className="block text-sm font-medium text-slate-700 mb-1">
@@ -133,10 +170,10 @@ export default function PaymentModal({ total, onConfirm, onClose }: PaymentModal
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!canConfirm}
+            disabled={!canConfirm || submitting}
             className="w-full py-4 bg-emerald-600 text-white font-bold text-lg rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar cobro
+            {submitting ? "Procesando…" : "Confirmar cobro"}
           </button>
         </div>
       </div>

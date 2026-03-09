@@ -13,13 +13,13 @@ import {
 export default function ReportPage() {
   const [stats, setStats] = useState<SalesStats | null>(null);
   const [downloadPeriod, setDownloadPeriod] = useState<ReportPeriod>("day");
+  const periodStats = getSalesStatsForPeriod(downloadPeriod);
 
   useEffect(() => {
     setStats(getSalesStats());
   }, []);
 
   const handleDownload = () => {
-    const periodStats = getSalesStatsForPeriod(downloadPeriod);
     const text = buildReportTextForPeriod(downloadPeriod, periodStats);
     const dateStr = new Date().toISOString().slice(0, 10);
     const name = `reporte-ventas-${downloadPeriod}-${dateStr}.txt`;
@@ -51,28 +51,28 @@ export default function ReportPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col p-4 gap-3 w-full" style={{ WebkitOverflowScrolling: "touch" }}>
-        {/* Períodos: Hoy, Semana, Mes */}
+        {/* Períodos: Hoy, Semana, Mes (ingresos en $) */}
         <div className="grid grid-cols-3 gap-2 flex-shrink-0">
           <div className="bg-apple-surface rounded-2xl border border-apple-border p-3 text-center">
             <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide">{stats.dayLabel}</p>
             <p className="text-lg sm:text-xl font-semibold text-apple-accent mt-0.5">
-              {stats.dayTotal.toFixed(1)}
+              ${stats.dayRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-apple-text2">ventas</p>
+            <p className="text-[10px] text-apple-text2">ingresos</p>
           </div>
           <div className="bg-apple-surface rounded-2xl border border-apple-border p-3 text-center">
             <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide">{stats.weekLabel}</p>
             <p className="text-lg sm:text-xl font-semibold text-apple-accent mt-0.5">
-              {stats.weekTotal.toFixed(1)}
+              ${stats.weekRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-apple-text2">ventas</p>
+            <p className="text-[10px] text-apple-text2">ingresos</p>
           </div>
           <div className="bg-apple-surface rounded-2xl border border-apple-border p-3 text-center">
             <p className="text-[10px] sm:text-xs text-apple-text2 uppercase tracking-wide">{stats.monthLabel}</p>
             <p className="text-lg sm:text-xl font-semibold text-apple-accent mt-0.5">
-              {stats.monthTotal.toFixed(1)}
+              ${stats.monthRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-apple-text2">ventas</p>
+            <p className="text-[10px] text-apple-text2">ingresos</p>
           </div>
         </div>
 
@@ -93,8 +93,11 @@ export default function ReportPage() {
                     className="flex items-center justify-between gap-2 text-xs py-1 border-b border-apple-border/40 last:border-0"
                   >
                     <span className="font-medium text-apple-text truncate">{p.name}</span>
-                    <span className="text-apple-accent font-semibold shrink-0">
-                      {p.quantity.toFixed(1)} {p.unit}
+                    <span className="text-apple-accent font-semibold shrink-0 text-right">
+                      {p.quantity} {p.unit}
+                      {p.revenue != null && (
+                        <span className="text-apple-text2 font-normal ml-1">${p.revenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                      )}
                     </span>
                   </li>
                 ))}
@@ -102,6 +105,28 @@ export default function ReportPage() {
             )}
           </div>
         </div>
+
+        {/* Detalle de ventas: producto, cantidad, precio, subtotal */}
+        {periodStats.detailLines.length > 0 && (
+          <div className="flex-shrink-0 flex flex-col bg-apple-surface rounded-2xl border border-apple-border overflow-hidden">
+            <div className="flex-shrink-0 p-3 border-b border-apple-border/50">
+              <h3 className="font-semibold text-apple-text text-sm">Detalle de ventas ({periodStats.label})</h3>
+              <p className="text-[10px] text-apple-text2 mt-0.5">Producto, cantidad, precio unitario y subtotal</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto max-h-48 p-3" style={{ WebkitOverflowScrolling: "touch" }}>
+              <ul className="space-y-2 text-xs">
+                {periodStats.detailLines.map((d, i) => (
+                  <li key={`${d.name}-${i}`} className="border-b border-apple-border/40 pb-2 last:border-0 last:pb-0">
+                    <p className="font-medium text-apple-text">{d.name}</p>
+                    <p className="text-apple-text2 mt-0.5">
+                      {d.quantity} × ${d.price.toFixed(2)} = <span className="font-semibold text-apple-accent">${d.subtotal.toFixed(2)}</span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
 
         {/* Descargar reporte: elegir período */}
         <div className="flex-shrink-0 space-y-2">

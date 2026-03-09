@@ -1,5 +1,5 @@
 /**
- * Historial de ventas para reportes: día, semana, mes y lo que más se vende.
+ * Historial de ventas para reportes: día, semana, mes y detalle de lo vendido con precios.
  * Se alimenta desde la Caja al registrar ventas.
  */
 
@@ -11,6 +11,10 @@ export interface SalesHistoryEntry {
   bottleName: string;
   quantity: number;
   unit: "oz" | "units";
+  /** Precio unitario (para reportes detallados) */
+  price?: number;
+  /** Subtotal de la línea (cantidad × precio) */
+  subtotal?: number;
 }
 
 function getHistory(): SalesHistoryEntry[] {
@@ -33,9 +37,16 @@ function saveHistory(entries: SalesHistoryEntry[]) {
   }
 }
 
-/** Llamar desde Caja al registrar una venta */
+/** Ítem de venta para registrar (desde Caja) */
+export interface SaleItemForReport {
+  name: string;
+  quantity: number;
+  price?: number;
+}
+
+/** Llamar desde Caja al registrar una venta. Guarda detalle con precios. */
 export function addSalesFromImport(
-  applied: { bottleName: string; deducted: number; unit: "oz" | "units" }[],
+  items: SaleItemForReport[],
   timestamp: Date
 ) {
   const iso = timestamp.toISOString();
@@ -43,12 +54,18 @@ export function addSalesFromImport(
   const cut = new Date();
   cut.setDate(cut.getDate() - MAX_DAYS);
   const filtered = history.filter((e) => new Date(e.timestamp) >= cut);
-  const newEntries: SalesHistoryEntry[] = applied.map((a) => ({
-    timestamp: iso,
-    bottleName: a.bottleName,
-    quantity: a.deducted,
-    unit: a.unit,
-  }));
+  const newEntries: SalesHistoryEntry[] = items.map((item) => {
+    const price = item.price ?? 0;
+    const subtotal = item.quantity * price;
+    return {
+      timestamp: iso,
+      bottleName: item.name,
+      quantity: item.quantity,
+      unit: "units" as const,
+      price: price > 0 ? price : undefined,
+      subtotal: subtotal > 0 ? subtotal : undefined,
+    };
+  });
   saveHistory([...newEntries, ...filtered]);
 }
 
@@ -74,10 +91,13 @@ export interface SalesStats {
   dayTotal: number;
   weekTotal: number;
   monthTotal: number;
+  dayRevenue: number;
+  weekRevenue: number;
+  monthRevenue: number;
   dayLabel: string;
   weekLabel: string;
   monthLabel: string;
-  topProducts: { name: string; quantity: number; unit: string }[];
+  topProducts: { name: string; quantity: number; unit: string; revenue?: number }[];
 }
 
 export function getSalesStats(): SalesStats {
@@ -87,29 +107,46 @@ export function getSalesStats(): SalesStats {
   let dayTotal = 0;
   let weekTotal = 0;
   let monthTotal = 0;
-  const byProduct: Record<string, { quantity: number; unit: string }> = {};
+  let dayRevenue = 0;
+  let weekRevenue = 0;
+  let monthRevenue = 0;
+  const byProduct: Record<string, { quantity: number; unit: string; revenue: number }> = {};
 
   for (const e of entries) {
     const q = e.quantity;
     const u = e.unit === "units" ? "unid" : "oz";
-    if (isToday(e.date)) dayTotal += q;
-    if (isThisWeek(e.date)) weekTotal += q;
-    if (isThisMonth(e.date)) monthTotal += q;
+    const rev = e.subtotal ?? 0;
+    if (isToday(e.date)) {
+      dayTotal += q;
+      dayRevenue += rev;
+    }
+    if (isThisWeek(e.date)) {
+      weekTotal += q;
+      weekRevenue += rev;
+    }
+    if (isThisMonth(e.date)) {
+      monthTotal += q;
+      monthRevenue += rev;
+    }
 
     const key = e.bottleName;
-    if (!byProduct[key]) byProduct[key] = { quantity: 0, unit: u };
+    if (!byProduct[key]) byProduct[key] = { quantity: 0, unit: u, revenue: 0 };
     byProduct[key].quantity += q;
+    byProduct[key].revenue += rev;
   }
 
   const topProducts = Object.entries(byProduct)
-    .map(([name, { quantity, unit }]) => ({ name, quantity, unit }))
-    .sort((a, b) => b.quantity - a.quantity)
+    .map(([name, { quantity, unit, revenue }]) => ({ name, quantity, unit, revenue: revenue > 0 ? revenue : undefined }))
+    .sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0) || b.quantity - a.quantity)
     .slice(0, 5);
 
   return {
     dayTotal,
     weekTotal,
     monthTotal,
+    dayRevenue,
+    weekRevenue,
+    monthRevenue,
     dayLabel: "Hoy",
     weekLabel: "Semana",
     monthLabel: "Mes",
@@ -119,13 +156,23 @@ export function getSalesStats(): SalesStats {
 
 export type ReportPeriod = "day" | "week" | "month";
 
-export interface SalesStatsForPeriod {
-  total: number;
-  label: string;
-  topProducts: { name: string; quantity: number; unit: string }[];
+export interface DetailLine {
+  name: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
 }
 
-function filterByPeriod(entries: { date: Date; quantity: number; bottleName: string; unit: string }[], period: ReportPeriod) {
+export interface SalesStatsForPeriod {
+  total: number;
+  totalRevenue: number;
+  label: string;
+  topProducts: { name: string; quantity: number; unit: string; revenue?: number }[];
+  /** Líneas detalladas: producto, cantidad, precio, subtotal (ordenadas por fecha más reciente) */
+  detailLines: DetailLine[];
+}
+
+function filterByPeriod<T extends { date: Date }>(entries: T[], period: ReportPeriod) {
   if (period === "day") return entries.filter((e) => isToday(e.date));
   if (period === "week") return entries.filter((e) => isThisWeek(e.date));
   return entries.filter((e) => isThisMonth(e.date));
@@ -138,21 +185,38 @@ export function getSalesStatsForPeriod(period: ReportPeriod): SalesStatsForPerio
     quantity: e.quantity,
     bottleName: e.bottleName,
     unit: e.unit === "units" ? "unid" : "oz",
+    price: e.price ?? 0,
+    subtotal: e.subtotal ?? 0,
   }));
   const filtered = filterByPeriod(entries, period);
   let total = 0;
-  const byProduct: Record<string, { quantity: number; unit: string }> = {};
+  let totalRevenue = 0;
+  const byProduct: Record<string, { quantity: number; unit: string; revenue: number }> = {};
+  const detailLines: DetailLine[] = [];
+
   for (const e of filtered) {
     total += e.quantity;
-    if (!byProduct[e.bottleName]) byProduct[e.bottleName] = { quantity: 0, unit: e.unit };
+    totalRevenue += e.subtotal;
+    if (!byProduct[e.bottleName]) byProduct[e.bottleName] = { quantity: 0, unit: e.unit, revenue: 0 };
     byProduct[e.bottleName].quantity += e.quantity;
+    byProduct[e.bottleName].revenue += e.subtotal;
+    if (e.price > 0 && e.subtotal > 0) {
+      detailLines.push({
+        name: e.bottleName,
+        quantity: e.quantity,
+        price: e.price,
+        subtotal: e.subtotal,
+      });
+    }
   }
+
   const topProducts = Object.entries(byProduct)
-    .map(([name, { quantity, unit }]) => ({ name, quantity, unit }))
-    .sort((a, b) => b.quantity - a.quantity)
+    .map(([name, { quantity, unit, revenue }]) => ({ name, quantity, unit, revenue: revenue > 0 ? revenue : undefined }))
+    .sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0) || b.quantity - a.quantity)
     .slice(0, 10);
+
   const labels: Record<ReportPeriod, string> = { day: "Día (hoy)", week: "Semana", month: "Mes" };
-  return { total, label: labels[period], topProducts };
+  return { total, totalRevenue, label: labels[period], topProducts, detailLines };
 }
 
 /** Genera texto para descargar como .txt (resumen de todos los períodos) */
@@ -161,38 +225,66 @@ export function buildReportText(stats: SalesStats): string {
     "Reporte de ventas - Servipartz",
     `Generado: ${new Date().toLocaleString("es-ES")}`,
     "",
-    "Ventas por período",
-    "-------------------",
-    `${stats.dayLabel}: ${stats.dayTotal.toFixed(1)}`,
-    `${stats.weekLabel}: ${stats.weekTotal.toFixed(1)}`,
-    `${stats.monthLabel}: ${stats.monthTotal.toFixed(1)}`,
+    "Ingresos por período",
+    "--------------------",
+    `${stats.dayLabel}: $${stats.dayRevenue.toFixed(2)}`,
+    `${stats.weekLabel}: $${stats.weekRevenue.toFixed(2)}`,
+    `${stats.monthLabel}: $${stats.monthRevenue.toFixed(2)}`,
     "",
     "Lo más vendido",
     "--------------",
-    ...stats.topProducts.map((p, i) => `${i + 1}. ${p.name}: ${p.quantity.toFixed(1)} ${p.unit}`),
+    ...stats.topProducts.map((p, i) =>
+      p.revenue != null
+        ? `${i + 1}. ${p.name}: ${p.quantity} ${p.unit} = $${p.revenue.toFixed(2)}`
+        : `${i + 1}. ${p.name}: ${p.quantity.toFixed(1)} ${p.unit}`
+    ),
     "",
     "--- Servipartz ---",
   ];
   return lines.join("\n");
 }
 
-/** Genera texto del reporte para un período concreto (día, semana o mes) */
+/** Genera texto del reporte detallado para un período (día, semana o mes) */
 export function buildReportTextForPeriod(period: ReportPeriod, periodStats: SalesStatsForPeriod): string {
   const lines: string[] = [
     `Reporte de ventas por ${periodStats.label} - Servipartz`,
     `Generado: ${new Date().toLocaleString("es-ES")}`,
     "",
-    "Total ventas",
-    "------------",
-    `${periodStats.label}: ${periodStats.total.toFixed(1)}`,
+    "Resumen",
+    "-------",
+    `Total ingresos: $${periodStats.totalRevenue.toFixed(2)}`,
+    `Unidades vendidas: ${periodStats.total}`,
     "",
-    "Lo más vendido en el período",
-    "-----------------------------",
-    ...(periodStats.topProducts.length === 0
-      ? ["Sin datos"]
-      : periodStats.topProducts.map((p, i) => `${i + 1}. ${p.name}: ${p.quantity.toFixed(1)} ${p.unit}`)),
-    "",
-    "--- Servipartz ---",
+    "Detalle de ventas (producto, cantidad, precio, subtotal)",
+    "--------------------------------------------------------",
   ];
+
+  if (periodStats.detailLines.length === 0) {
+    lines.push("Sin datos de ventas con precio en este período.");
+  } else {
+    const fmt = (n: number) => n.toFixed(2);
+    for (const d of periodStats.detailLines) {
+      lines.push(`${d.name}`);
+      lines.push(`  Cant: ${d.quantity}  |  Precio unit: $${fmt(d.price)}  |  Subtotal: $${fmt(d.subtotal)}`);
+    }
+  }
+
+  lines.push("");
+  lines.push("Lo más vendido en el período");
+  lines.push("-----------------------------");
+  if (periodStats.topProducts.length === 0) {
+    lines.push("Sin datos");
+  } else {
+    periodStats.topProducts.forEach((p, i) => {
+      if (p.revenue != null) {
+        lines.push(`${i + 1}. ${p.name}: ${p.quantity} ${p.unit} = $${p.revenue.toFixed(2)}`);
+      } else {
+        lines.push(`${i + 1}. ${p.name}: ${p.quantity.toFixed(1)} ${p.unit}`);
+      }
+    });
+  }
+
+  lines.push("");
+  lines.push("--- Servipartz ---");
   return lines.join("\n");
 }

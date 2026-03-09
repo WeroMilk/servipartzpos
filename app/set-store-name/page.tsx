@@ -7,25 +7,25 @@ import LogoutButton from "@/components/Auth/LogoutButton";
 import { demoAuth } from "@/lib/demoAuth";
 import { movementsService } from "@/lib/movements";
 
-export default function SetBarNamePage() {
-  const [barName, setBarName] = useState("");
+export default function SetStoreNamePage() {
+  const [storeName, setStoreName] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     const user = demoAuth.getCurrentUser();
-    if (user?.barName) setBarName(user.barName);
+    if (user?.storeName) setStoreName(user.storeName);
   }, []);
 
   const handleContinue = () => {
-    const name = barName.trim();
+    const name = storeName.trim();
     if (!name) {
       alert("Por favor ingresa el nombre de tu tienda");
       return;
     }
-    const oldName = demoAuth.getCurrentUser()?.barName ?? "";
-    demoAuth.updateBarName(name);
+    const oldName = demoAuth.getCurrentUser()?.storeName ?? "";
+    demoAuth.updateStoreName(name);
     movementsService.add({
-      type: "bar_name_change",
+      type: "store_name_change",
       bottleId: "_",
       bottleName: "Nombre de tienda",
       newValue: 0,
@@ -41,7 +41,6 @@ export default function SetBarNamePage() {
         className="relative min-h-[100dvh] min-h-screen bg-apple-bg px-8 py-4 sm:px-6 sm:py-4 flex items-center justify-center safe-area-x overflow-hidden"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        {/* Sombras naranjas con blur (mismo efecto que login) */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="login-orb-1 absolute w-[min(80vw,320px)] h-[min(80vw,320px)] rounded-full bg-primary-600 opacity-20 blur-[80px] -left-[10%] top-[5%]" />
           <div className="login-orb-2 absolute w-[min(60vw,260px)] h-[min(60vw,260px)] rounded-full bg-primary-700 opacity-25 blur-[70px] right-[0%] top-[30%]" />
@@ -68,16 +67,16 @@ export default function SetBarNamePage() {
 
             <div className="space-y-6">
               <div>
-                <label htmlFor="set-bar-name" className="block text-sm font-medium text-apple-text mb-2">
-                  Nombre del bar
+                <label htmlFor="set-store-name" className="block text-sm font-medium text-apple-text mb-2">
+                  Nombre de la tienda
                 </label>
                 <input
-                  id="set-bar-name"
-                  name="barName"
+                  id="set-store-name"
+                  name="storeName"
                   type="text"
                   autoComplete="organization"
-                  value={barName}
-                  onChange={(e) => setBarName(e.target.value)}
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
                   placeholder="Ej: Servipartz Hermosillo"
                   className="w-full px-4 py-3 bg-apple-surface2 border border-apple-border rounded-xl text-apple-text placeholder-apple-text2 focus:outline-none focus:ring-2 focus:ring-apple-accent focus:border-transparent"
                 />
@@ -85,7 +84,7 @@ export default function SetBarNamePage() {
 
               <button
                 onClick={handleContinue}
-                disabled={!barName.trim()}
+                disabled={!storeName.trim()}
                 className="w-full bg-apple-accent hover:bg-apple-accent/90 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continuar

@@ -53,14 +53,22 @@ export function buildTicketHtml(data: TicketData): string {
   lines.push(`Subtotal:            $${data.total.toFixed(2)}`);
   lines.push(`Total:               $${data.total.toFixed(2)}`);
   lines.push("----------------------------------------");
-  lines.push(`Pago: ${data.paymentMethod.charAt(0).toUpperCase() + data.paymentMethod.slice(1)}`);
+  const paymentLabel =
+    data.paymentMethod === "tarjeta_debito"
+      ? "Tarjeta débito"
+      : data.paymentMethod === "tarjeta_credito"
+        ? "Tarjeta crédito"
+        : data.paymentMethod.charAt(0).toUpperCase() + data.paymentMethod.slice(1);
+  lines.push(`Pago: ${paymentLabel}`);
   if (data.paymentMethod === "efectivo" && data.amountReceived != null) {
     lines.push(`Recibido:            $${data.amountReceived.toFixed(2)}`);
     if (data.change != null) lines.push(`Cambio:              $${data.change.toFixed(2)}`);
   }
   lines.push("========================================");
   lines.push("   Gracias por su compra");
-  lines.push(`   ${SERVIPARTZ_INFO.hours}`);
+  for (const h of SERVIPARTZ_INFO.hours.split("\n")) {
+    lines.push(`   ${h}`);
+  }
   lines.push("========================================");
 
   const text = lines.join("\n");

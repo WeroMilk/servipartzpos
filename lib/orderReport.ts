@@ -43,7 +43,7 @@ export function buildOrderReport(bottles: Bottle[]): { text: string; lines: Orde
           const name = localStorage.getItem("pos_current_store_name");
           if (name) return name;
           const u = localStorage.getItem("demo_user");
-          if (u) return (JSON.parse(u) as { barName?: string }).barName ?? "Servipartz";
+          if (u) return (JSON.parse(u) as { storeName?: string }).storeName ?? "Servipartz";
         } catch {}
         return "Servipartz";
       })()

@@ -20,6 +20,14 @@ export default function TicketPreview({ data, onNewSale }: TicketPreviewProps) {
     minute: "2-digit",
   });
   const ticketNum = String(data.ticketNumber).padStart(6, "0");
+  const paymentLabel =
+    data.paymentMethod === "tarjeta_debito"
+      ? "Tarjeta débito"
+      : data.paymentMethod === "tarjeta_credito"
+        ? "Tarjeta crédito"
+        : data.paymentMethod
+          ? data.paymentMethod.charAt(0).toUpperCase() + data.paymentMethod.slice(1)
+          : "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -47,7 +55,7 @@ export default function TicketPreview({ data, onNewSale }: TicketPreviewProps) {
               Total: ${data.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
             </div>
             <div className="text-slate-500 mt-1">
-              {dateStr} · {data.paymentMethod}
+              {dateStr} · {paymentLabel}
               {data.change != null && data.change > 0 && ` · Cambio: $${data.change.toFixed(2)}`}
             </div>
           </div>

@@ -25,7 +25,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (demoAuth.getCurrentUser()?.role !== "admin") {
-      router.replace("/bar");
+      router.replace("/inventario");
       return;
     }
 
@@ -55,16 +55,16 @@ export default function AdminPage() {
         .finally(() => setLoading(false));
     } else {
       const stats = getSalesStats();
-      const storeName = demoAuth.getCurrentUser()?.barName ?? "Tienda principal";
+      const storeName = demoAuth.getCurrentUser()?.storeName ?? "Tienda principal";
       setSummaries([
         {
           storeId: "default",
           storeName,
-          totalSales: stats.monthTotal,
+          totalSales: stats.monthRevenue,
           saleCount: 0,
         },
       ]);
-      setGlobalTotal(stats.monthTotal);
+      setGlobalTotal(stats.monthRevenue);
       setLoading(false);
     }
   }, [router]);

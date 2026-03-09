@@ -5,7 +5,7 @@ export interface DemoUser {
   email: string;
   password: string;
   name: string;
-  barName?: string;
+  storeName?: string;
   role?: "admin" | "store_user";
   storeIds?: string[];
 }
@@ -15,7 +15,7 @@ export const DEMO_USERS: DemoUser[] = [
     email: "zavala@servipartz.com",
     password: "sombra123",
     name: "Zavala",
-    barName: "Servipartz Hermosillo",
+    storeName: "Servipartz Hermosillo",
     role: "admin",
     storeIds: ["default"],
   },
@@ -41,7 +41,7 @@ export const demoAuth = {
     });
   },
 
-  signUp: (email: string, password: string, name?: string, barName?: string): Promise<DemoUser> => {
+  signUp: (email: string, password: string, name?: string, storeName?: string): Promise<DemoUser> => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         if (DEMO_USERS.find((u) => u.email === email)) {
@@ -52,7 +52,7 @@ export const demoAuth = {
           email,
           password,
           name: name || email.split("@")[0],
-          barName: barName || "Mi Tienda",
+          storeName: storeName || "Mi Tienda",
         };
         DEMO_USERS.push(newUser);
         currentDemoUser = newUser;
@@ -71,7 +71,12 @@ export const demoAuth = {
     if (currentDemoUser) return currentDemoUser;
     const stored = localStorage.getItem("demo_user");
     if (stored) {
-      currentDemoUser = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as DemoUser & { barName?: string };
+      // Migración: barName -> storeName
+      if (parsed.barName && !parsed.storeName) {
+        parsed.storeName = parsed.barName;
+      }
+      currentDemoUser = parsed;
       return currentDemoUser;
     }
     return null;
@@ -81,10 +86,10 @@ export const demoAuth = {
     return demoAuth.getCurrentUser() !== null;
   },
 
-  updateBarName: (barName: string): void => {
+  updateStoreName: (storeName: string): void => {
     const user = demoAuth.getCurrentUser();
     if (user) {
-      user.barName = barName.trim() || "Mi Tienda";
+      user.storeName = storeName.trim() || "Mi Tienda";
       currentDemoUser = user;
       localStorage.setItem("demo_user", JSON.stringify(user));
     }

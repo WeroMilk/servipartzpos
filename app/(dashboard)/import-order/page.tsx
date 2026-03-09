@@ -2,10 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { Package, Upload, Download } from "lucide-react";
-import { loadBarBottles, saveBarBottles } from "@/lib/barStorage";
+import { loadInventory, saveInventory } from "@/lib/inventoryStorage";
 import { applyOrderToInventory, sheetToOrderRows } from "@/lib/orderImport";
 import { buildSalesOrderExcelTemplate, downloadSalesOrderTemplate } from "@/lib/excelTemplate";
 import { setLastInventoryUpdate } from "@/lib/inventoryUpdate";
+import { setLastInventoryComplete } from "@/lib/lastInventoryComplete";
 import { movementsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { useToast } from "@/components/Toast/ToastContext";
@@ -20,7 +21,7 @@ export default function ImportOrderPage() {
   const toast = useToast();
 
   const handleDownloadTemplate = useCallback(async () => {
-    const bottles = loadBarBottles();
+    const bottles = loadInventory();
     if (bottles.length === 0) {
       const msg = "Primero configura tu inventario en Configuración → Modifica tu inventario.";
       setMessage(msg);
@@ -71,7 +72,7 @@ export default function ImportOrderPage() {
         return;
       }
 
-      const bottles = loadBarBottles();
+      const bottles = loadInventory();
       if (bottles.length === 0) {
         const msg = "No hay inventario. Configura los productos en Configuración → Modifica tu inventario.";
         setStatus("error");
@@ -81,7 +82,7 @@ export default function ImportOrderPage() {
       }
 
       const result = applyOrderToInventory(bottles, orderRows);
-      saveBarBottles(result.updatedBottles);
+      saveInventory(result.updatedBottles);
 
       const now = new Date();
       const dateStr = now.toLocaleString("es-ES", {
@@ -92,6 +93,7 @@ export default function ImportOrderPage() {
         minute: "2-digit",
       });
       setLastInventoryUpdate(dateStr);
+      setLastInventoryComplete();
 
       movementsService.add({
         type: "order_import",
@@ -130,7 +132,7 @@ export default function ImportOrderPage() {
   return (
     <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
       <div className="min-h-full flex flex-col justify-center px-4 py-6 pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="max-w-lg mx-auto w-full space-y-6">
+        <div className="max-w-lg mx-auto w-full space-y-6 -mt-24">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-apple-surface border border-apple-border">
             <Package className="w-8 h-8 text-apple-accent" />

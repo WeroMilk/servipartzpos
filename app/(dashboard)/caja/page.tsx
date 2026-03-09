@@ -4,16 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { useFirebase } from "@/lib/firebase";
-import { loadBarBottles, saveBarBottles } from "@/lib/barStorage";
+import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
 import { getStoreProducts, addSale, updateProductStock, addMovement } from "@/lib/firestore";
 import { movementsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
+import { setLastSaleImport } from "@/lib/lastSaleImport";
 import { demoAuth } from "@/lib/demoAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
 import PaymentModal from "@/components/Caja/PaymentModal";
 import TicketPreview from "@/components/Caja/TicketPreview";
-import type { Bottle } from "@/lib/types";
+import type { Bottle, PaymentMethod } from "@/lib/types";
 import type { SaleItem } from "@/lib/types";
 import type { TicketData } from "@/lib/ticketService";
 
@@ -37,9 +38,9 @@ export default function CajaPage() {
 
   const isDefaultStore = storeId === "default";
 
-  const loadInventory = useCallback(() => {
+  const refreshData = useCallback(() => {
     if (isDefaultStore) {
-      setBottles(loadBarBottles());
+      setBottles(loadInventoryFromStorage());
       setProducts([]);
     } else if (storeId && useFirebase) {
       getStoreProducts(storeId).then((prods) => {
@@ -50,8 +51,8 @@ export default function CajaPage() {
   }, [storeId, isDefaultStore]);
 
   useEffect(() => {
-    loadInventory();
-  }, [loadInventory]);
+    refreshData();
+  }, [refreshData]);
 
   const items = isDefaultStore
     ? bottles.map((b) => {
@@ -100,14 +101,17 @@ export default function CajaPage() {
   const total = cart.reduce((acc, c) => acc + (c.price ?? 0) * c.quantity, 0);
 
   const processSaleWithPayment = async (payment: {
-    method: "efectivo" | "tarjeta" | "transferencia";
+    method: PaymentMethod;
     amountReceived?: number;
     change?: number;
   }) => {
-    if (cart.length === 0) return;
+    const cartToProcess = [...cart];
+    if (cartToProcess.length === 0) return;
+    // Vaciar carrito de inmediato para evitar doble cobro si el usuario hace doble clic
+    setCart([]);
     setShowPaymentModal(false);
     setProcessing(true);
-    const saleItems: SaleItem[] = cart.map((c) => ({
+    const saleItems: SaleItem[] = cartToProcess.map((c) => ({
       productId: c.id,
       name: c.name,
       quantity: c.quantity,
@@ -118,8 +122,8 @@ export default function CajaPage() {
 
     try {
       if (isDefaultStore) {
-        const currentBottles = loadBarBottles();
-        const applied = cart.map((c) => {
+        const currentBottles = loadInventoryFromStorage();
+        const applied = cartToProcess.map((c) => {
           const bottle = currentBottles.find((b) => b.id === c.id);
           if (!bottle) return null;
           const useUnits = isMeasuredInUnits(bottle.category);
@@ -140,8 +144,11 @@ export default function CajaPage() {
             return { bottleName: b.name, deducted: toDeductOz, unit: "oz" as const };
           }
         }).filter(Boolean) as { bottleName: string; deducted: number; unit: "oz" | "units" }[];
-        saveBarBottles(currentBottles);
-        addSalesFromImport(applied, saleDate);
+        saveInventory(currentBottles);
+        addSalesFromImport(
+          saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
+          saleDate
+        );
         applied.forEach((a) => {
           movementsService.add({
             type: "sales_import",
@@ -166,7 +173,7 @@ export default function CajaPage() {
             ticketNumber,
           }
         );
-        for (const c of cart) {
+        for (const c of cartToProcess) {
           const prod = products.find((p) => p.id === c.id);
           if (prod) {
             const newStock = Math.max(0, prod.stock - c.quantity);
@@ -183,6 +190,7 @@ export default function CajaPage() {
         }
       }
 
+      setLastSaleImport();
       setTicketData({
         items: saleItems,
         total,
@@ -193,13 +201,12 @@ export default function CajaPage() {
         change: payment.change,
         date: saleDate,
       });
-      setCart([]);
     } catch (e) {
       console.error(e);
       alert("Error al registrar la venta");
     } finally {
       setProcessing(false);
-      loadInventory();
+      refreshData();
     }
   };
 

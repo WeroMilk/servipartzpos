@@ -17,7 +17,7 @@ interface DashboardHeaderProps {
 const POS_NAV = { href: "/caja", icon: ShoppingCart, label: "Punto de venta" };
 
 const NAV_ITEMS = [
-  { href: "/bar", icon: Package, label: "Inventario" },
+  { href: "/inventario", icon: Package, label: "Inventario" },
   { href: "/movements", icon: Bell, label: "Movimientos" },
   { href: "/report", icon: DollarSign, label: "Reporte de ventas" },
   { href: "/import-order", icon: PackageOpen, label: "Importar pedido" },
@@ -42,7 +42,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
             <Link href="/caja" title="Ir a Punto de venta" className="flex items-center gap-2 shrink-0">
               <span className="text-base sm:text-lg font-semibold text-white">Servipartz</span>
               <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[120px]">
-                {storeStore.getStoreName() || demoAuth.getCurrentUser()?.barName || "POS"}
+                {storeStore.getStoreName() || demoAuth.getCurrentUser()?.storeName || "POS"}
               </span>
             </Link>
           </div>
