@@ -5,12 +5,9 @@
 La aplicación está funcionando en **modo DEMO** (sin Firebase configurado). Puedes usar cualquiera de estos usuarios para probar:
 
 ### Usuario de Prueba
-- **Email:** `demo@mibarra.com`
-- **Contraseña:** `MiBarraDemo1!`
-- **Nombre:** Gerente
-
-### Contraseña de Gerente
-- **Contraseña:** `gerente123` (para editar inventario, cambiar porciones, etc.)
+- **Email:** `zavala@servipartz.com`
+- **Contraseña:** `sombra123`
+- **Nombre:** Zavala
 
 ## Cómo Usar
 

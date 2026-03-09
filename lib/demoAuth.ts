@@ -12,9 +12,9 @@ export interface DemoUser {
 
 export const DEMO_USERS: DemoUser[] = [
   {
-    email: "demo@servipartz.com",
-    password: "ServipartzDemo1!",
-    name: "Gerente",
+    email: "zavala@servipartz.com",
+    password: "sombra123",
+    name: "Zavala",
     barName: "Servipartz Hermosillo",
     role: "admin",
     storeIds: ["default"],

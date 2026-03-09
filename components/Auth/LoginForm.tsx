@@ -21,11 +21,20 @@ export default function LoginForm() {
 
     try {
       if (useFirebase && auth) {
-        // Usar Firebase real
-        if (isLogin) {
-          await signInWithEmailAndPassword(auth, email, password);
-        } else {
-          await createUserWithEmailAndPassword(auth, email, password);
+        try {
+          // Usar Firebase real
+          if (isLogin) {
+            await signInWithEmailAndPassword(auth, email, password);
+          } else {
+            await createUserWithEmailAndPassword(auth, email, password);
+          }
+        } catch (firebaseErr: any) {
+          // Si Firebase Auth no está configurado (auth/configuration-not-found), usar demo
+          if (firebaseErr?.code === "auth/configuration-not-found") {
+            await demoAuth.signIn(email, password);
+          } else {
+            throw firebaseErr;
+          }
         }
       } else {
         // Usar modo demo
@@ -116,10 +125,9 @@ export default function LoginForm() {
             </button>
           </form>
 
-          {!useFirebase && (
-            <div className="mt-6 pt-6 border-t border-apple-border">
+          <div className="mt-6 pt-6 border-t border-apple-border">
               <p className="text-xs text-apple-text2 text-center mb-3">
-                Modo DEMO - Usuario de prueba:
+                Usuario de prueba:
               </p>
               <div className="space-y-2">
                 {DEMO_USERS.map((user) => (
@@ -142,7 +150,6 @@ export default function LoginForm() {
                 Haz clic en un usuario para autocompletar
               </p>
             </div>
-          )}
         </div>
       </div>
     </div>
