@@ -78,7 +78,7 @@ export const DEFAULT_PRODUCTS: Omit<Product, "stock">[] = [
 ];
 
 export function getDefaultProductsWithStock(stock = 0): Product[] {
-  return DEFAULT_PRODUCTS.map((p) => ({ ...p, stock }));
+  return DEFAULT_PRODUCTS.map((p) => ({ ...p, stock, barcode: p.barcode ?? p.sku }));
 }
 
 export function getProductsByCategory(products: Product[], category: string): Product[] {

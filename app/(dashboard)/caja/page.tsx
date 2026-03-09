@@ -5,10 +5,12 @@ import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2 } from "lucide-react
 import { storeStore } from "@/lib/storeStore";
 import { useFirebase } from "@/lib/firebase";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
+import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
 import { getStoreProducts, addSale, updateProductStock, addMovement } from "@/lib/firestore";
 import { movementsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
+import { enqueueSale, processQueue, registerSaleLocally } from "@/lib/syncQueue";
 import { setLastSaleImport } from "@/lib/lastSaleImport";
 import { demoAuth } from "@/lib/demoAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
@@ -29,7 +31,7 @@ interface CartItem {
 export default function CajaPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
   const [bottles, setBottles] = useState<Bottle[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string; stock: number; price?: number }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; stock: number; price?: number; sku?: string; barcode?: string }[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -44,7 +46,7 @@ export default function CajaPage() {
       setProducts([]);
     } else if (storeId && useFirebase) {
       getStoreProducts(storeId).then((prods) => {
-        setProducts(prods.map((p) => ({ id: p.id, name: p.name, stock: p.stock, price: p.price })));
+        setProducts(prods.map((p) => ({ id: p.id, name: p.name, stock: p.stock, price: p.price, sku: p.sku, barcode: p.barcode })));
         setBottles([]);
       });
     }
@@ -54,21 +56,53 @@ export default function CajaPage() {
     refreshData();
   }, [refreshData]);
 
+  useEffect(() => {
+    const syncPending = () => {
+      processQueue().then((n) => {
+        if (n > 0) refreshData();
+      });
+    };
+    if (navigator.onLine) syncPending();
+    window.addEventListener("online", syncPending);
+    return () => window.removeEventListener("online", syncPending);
+  }, [refreshData]);
+
   const items = isDefaultStore
     ? bottles.map((b) => {
         const useUnits = isMeasuredInUnits(b.category);
         const stock = useUnits
           ? (b.currentUnits ?? 0)
           : Math.floor((b.currentOz ?? 0) / 29.57);
-        return { id: b.id, name: b.name, stock, price: b.price ?? 0 };
+        const prod = DEFAULT_PRODUCTS.find((p) => p.id === b.id);
+        return { id: b.id, name: b.name, stock, price: b.price ?? 0, sku: prod?.sku, barcode: prod?.barcode };
       })
     : products;
 
   const filtered = items.filter(
     (i) =>
       !search.trim() ||
-      i.name.toLowerCase().includes(search.toLowerCase())
+      i.name.toLowerCase().includes(search.toLowerCase()) ||
+      i.sku?.toLowerCase().includes(search.toLowerCase()) ||
+      i.barcode?.toLowerCase().includes(search.toLowerCase()) ||
+      i.id === search.trim()
   );
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    const code = search.trim();
+    if (!code) return;
+    const match = items.find(
+      (i) =>
+        i.id === code ||
+        i.sku?.toLowerCase() === code.toLowerCase() ||
+        i.barcode?.toLowerCase() === code.toLowerCase()
+    );
+    if (match && match.stock > 0) {
+      addToCart(match);
+      setSearch("");
+      e.preventDefault();
+    }
+  };
 
   const addToCart = (item: (typeof items)[0], qty = 1) => {
     const stock = item.stock;
@@ -160,33 +194,62 @@ export default function CajaPage() {
           });
         });
       } else if (storeId && useFirebase) {
-        await addSale(
-          storeId,
-          saleItems,
-          total,
-          undefined,
-          demoAuth.getCurrentUser()?.name,
-          {
+        try {
+          await addSale(
+            storeId,
+            saleItems,
+            total,
+            undefined,
+            demoAuth.getCurrentUser()?.name,
+            {
+              paymentMethod: payment.method,
+              amountReceived: payment.amountReceived,
+              change: payment.change,
+              ticketNumber,
+            }
+          );
+          for (const c of cartToProcess) {
+            const prod = products.find((p) => p.id === c.id);
+            if (prod) {
+              const newStock = Math.max(0, prod.stock - c.quantity);
+              await updateProductStock(storeId, c.id, newStock, c.name);
+              await addMovement(storeId, {
+                productId: c.id,
+                productName: c.name,
+                type: "sale",
+                oldValue: prod.stock,
+                newValue: newStock,
+                userName: demoAuth.getCurrentUser()?.name ?? "Caja",
+              });
+            }
+          }
+        } catch {
+          const productStocks = cartToProcess.map((c) => {
+            const prod = products.find((p) => p.id === c.id);
+            const newStock = prod ? Math.max(0, prod.stock - c.quantity) : 0;
+            return {
+              productId: c.id,
+              productName: c.name,
+              oldStock: prod?.stock ?? 0,
+              newStock,
+            };
+          });
+          enqueueSale({
+            type: "sale",
+            storeId,
+            items: saleItems,
+            total,
+            employeeName: demoAuth.getCurrentUser()?.name,
             paymentMethod: payment.method,
             amountReceived: payment.amountReceived,
             change: payment.change,
             ticketNumber,
-          }
-        );
-        for (const c of cartToProcess) {
-          const prod = products.find((p) => p.id === c.id);
-          if (prod) {
-            const newStock = Math.max(0, prod.stock - c.quantity);
-            await updateProductStock(storeId, c.id, newStock, c.name);
-            await addMovement(storeId, {
-              productId: c.id,
-              productName: c.name,
-              type: "sale",
-              oldValue: prod.stock,
-              newValue: newStock,
-              userName: demoAuth.getCurrentUser()?.name ?? "Caja",
-            });
-          }
+            productStocks,
+          });
+          registerSaleLocally(
+            saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
+            saleDate
+          );
         }
       }
 
@@ -232,9 +295,10 @@ export default function CajaPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar producto... (escribe para filtrar)"
+                placeholder="Buscar por nombre, SKU o escanear código de barras"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 autoFocus
                 className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />

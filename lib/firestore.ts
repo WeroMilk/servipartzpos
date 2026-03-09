@@ -6,6 +6,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -76,6 +77,39 @@ export async function createStore(name: string, address?: string): Promise<Store
   return store;
 }
 
+export async function updateStore(storeId: string, data: { name?: string; address?: string }): Promise<void> {
+  if (!db || !useFirebase) throw new Error("Firebase no configurado");
+  const ref = doc(db, "stores", storeId);
+  const updates: Record<string, unknown> = {};
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.address !== undefined) updates.address = data.address;
+  if (Object.keys(updates).length === 0) return;
+  await updateDoc(ref, updates);
+}
+
+export async function deleteStore(storeId: string): Promise<void> {
+  if (!db || !useFirebase) throw new Error("Firebase no configurado");
+  const storeRef = doc(db, "stores", storeId);
+  const subcollections = ["products", "sales", "movements"];
+  for (const sub of subcollections) {
+    const snap = await getDocs(collection(db, "stores", storeId, sub));
+    const batchSize = 500;
+    let batch = writeBatch(db);
+    let count = 0;
+    for (const d of snap.docs) {
+      batch.delete(d.ref);
+      count++;
+      if (count >= batchSize) {
+        await batch.commit();
+        batch = writeBatch(db);
+        count = 0;
+      }
+    }
+    if (count > 0) await batch.commit();
+  }
+  await deleteDoc(storeRef);
+}
+
 // --- Products (por tienda) ---
 
 export async function getStoreProducts(storeId: string): Promise<Product[]> {
@@ -89,6 +123,7 @@ export async function getStoreProducts(storeId: string): Promise<Product[]> {
       name: data.name || "",
       category: data.category || "",
       sku: data.sku,
+      barcode: data.barcode,
       price: data.price,
       stock: data.stock ?? 0,
       image: data.image,
@@ -108,6 +143,7 @@ export async function initStoreProducts(storeId: string): Promise<Product[]> {
       name: p.name,
       category: p.category,
       sku: p.sku ?? null,
+      barcode: p.barcode ?? null,
       price: p.price ?? null,
       stock: p.stock,
       image: p.image ?? null,
@@ -136,6 +172,7 @@ export async function setProduct(storeId: string, product: Product): Promise<voi
     name: product.name,
     category: product.category,
     sku: product.sku ?? null,
+    barcode: product.barcode ?? null,
     price: product.price ?? null,
     stock: product.stock,
     image: product.image ?? null,

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, TrendingUp } from "lucide-react";
+import { Download, Printer, TrendingUp } from "lucide-react";
 import {
   getSalesStats,
   getSalesStatsForPeriod,
   buildReportTextForPeriod,
+  printReportForPeriod,
   type SalesStats,
   type ReportPeriod,
 } from "@/lib/salesReport";
@@ -128,9 +129,9 @@ export default function ReportPage() {
           </div>
         )}
 
-        {/* Descargar reporte: elegir período */}
+        {/* Descargar / Imprimir reporte: elegir período */}
         <div className="flex-shrink-0 space-y-2">
-          <p className="text-xs font-medium text-apple-text2">Descargar reporte por</p>
+          <p className="text-xs font-medium text-apple-text2">Reporte por</p>
           <div className="flex gap-2">
             {(["day", "week", "month"] as const).map((period) => (
               <button
@@ -147,14 +148,24 @@ export default function ReportPage() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-apple-accent text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity"
-          >
-            <Download className="w-4 h-4 flex-shrink-0" />
-            Descargar reporte .txt
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-apple-accent text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity"
+            >
+              <Download className="w-4 h-4 flex-shrink-0" />
+              Descargar
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-apple-surface border border-apple-border text-apple-text text-sm font-medium rounded-xl hover:bg-apple-bg transition-colors"
+            >
+              <Printer className="w-4 h-4 flex-shrink-0" />
+              Imprimir
+            </button>
+          </div>
         </div>
       </div>
     </div>

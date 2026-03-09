@@ -8,7 +8,9 @@ import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { loadInventory } from "@/lib/inventoryStorage";
 import { buildOrderReport } from "@/lib/orderReport";
-import { Lock, Package, ShoppingCart, Download, MessageCircle, Check, Loader2, Store } from "lucide-react";
+import { exportInventory, exportSales, exportMovements, exportAll } from "@/lib/exportService";
+import { getCFDIConfig, setCFDIConfig, type CFDIConfig } from "@/lib/cfdiService";
+import { Lock, Package, ShoppingCart, Download, MessageCircle, Check, Loader2, Store, Database, FileJson, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const WHATSAPP_RECIPIENTS = [
@@ -33,6 +35,28 @@ export default function ConfigPage() {
   }, []);
   const [orderReportText, setOrderReportText] = useState("");
   const [orderRecipient, setOrderRecipient] = useState(WHATSAPP_RECIPIENTS[0]?.value ?? "");
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [cfdiConfig, setCfdiConfigState] = useState<CFDIConfig | null>(() =>
+    typeof window !== "undefined" ? getCFDIConfig() : null
+  );
+  const [cfdiForm, setCfdiForm] = useState<CFDIConfig>({
+    rfc: "",
+    razonSocial: "",
+    regimenFiscal: "601",
+    domicilioFiscal: "",
+    codigoPostal: "",
+    pacUser: "",
+    pacPassword: "",
+    pacUrl: "https://api.facturama.mx/2/cfdi",
+  });
+
+  useEffect(() => {
+    const c = getCFDIConfig();
+    if (c) {
+      setCfdiConfigState(c);
+      setCfdiForm((prev) => ({ ...prev, ...c }));
+    }
+  }, []);
 
   const handleGenerateOrder = () => {
     const bottles = loadInventory();
@@ -55,6 +79,26 @@ export default function ConfigPage() {
     a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleSaveCFDI = () => {
+    setCFDIConfig(cfdiForm);
+    setCfdiConfigState(cfdiForm);
+  };
+
+  const handleExport = async (type: "inventory" | "sales" | "movements" | "all") => {
+    setExporting(type);
+    try {
+      if (type === "inventory") await exportInventory("json");
+      else if (type === "sales") await exportSales("json");
+      else if (type === "movements") await exportMovements();
+      else await exportAll();
+    } catch (e) {
+      console.error(e);
+      alert("Error al exportar");
+    } finally {
+      setExporting(null);
+    }
   };
 
   const handleSendWhatsApp = () => {
@@ -130,53 +174,57 @@ export default function ConfigPage() {
               <p className="text-xs text-apple-text2">Selecciona otra sucursal para trabajar</p>
             </div>
           </Link>
-          {/* Contraseña de empleado - ocupa la fila superior completa en desktop */}
+          {/* Contraseña de empleado - compacto en móvil para evitar scroll */}
           <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
-            <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10">
-                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
+            <div className="flex-shrink-0 px-2 sm:px-4 py-1.5 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h2 className="text-xs sm:text-sm font-semibold text-apple-text truncate">Contraseña de empleado</h2>
-                <p className="text-[10px] sm:text-xs text-apple-text2 truncate">Edita contraseñas; se registra en Movimientos.</p>
+                <p className="text-[10px] sm:text-xs text-apple-text2 truncate hidden sm:block">Edita contraseñas; se registra en Movimientos.</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="shrink-0 px-2 py-1 text-[10px] sm:text-xs font-medium rounded-md border border-apple-border text-apple-text2 bg-apple-bg hover:bg-apple-border/30 sm:hidden"
+              >
+                {showPassword ? "Ocultar" : "Ver"}
+              </button>
             </div>
-            {/* En mobile, permitir scroll si hiciera falta; en desktop, sin scroll interno */}
-            <div className="flex-1 min-h-0 overflow-y-auto md:overflow-visible overflow-x-hidden p-2 sm:p-3 space-y-2">
+            <div className="flex-1 min-h-0 overflow-x-hidden p-1.5 sm:p-3 space-y-1 sm:space-y-2">
               {employees.map((emp) => (
-                <div key={emp.id} className="rounded-lg sm:rounded-xl border border-apple-border bg-apple-bg/50 p-2 sm:p-3 space-y-1.5">
-                  <label htmlFor={`employee-password-${emp.id}`} className="block text-[11px] sm:text-xs font-medium text-apple-text">{emp.label}</label>
-                  <div className="flex flex-col sm:flex-row gap-1.5">
-                    <input
-                      id={`employee-password-${emp.id}`}
-                      name={`employee-password-${emp.id}`}
-                      type={showPassword ? "text" : "password"}
-                      value={editingPassword[emp.id] ?? emp.password}
-                      onChange={(e) =>
-                        setEditingPassword((prev) => ({ ...prev, [emp.id]: e.target.value }))
-                      }
-                      placeholder="Contraseña"
-                      className="flex-1 min-w-0 px-2.5 py-2 text-xs sm:text-sm font-mono bg-apple-surface border border-apple-border rounded-lg focus:outline-none focus:ring-2 focus:ring-apple-accent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onSavePassword(emp)}
-                      disabled={savingEmployeeId !== null}
-                      className="shrink-0 px-3 py-2 bg-apple-accent text-white text-xs sm:text-sm font-medium rounded-lg hover:opacity-90 inline-flex items-center justify-center gap-1.5 disabled:opacity-70 min-h-[40px] sm:min-h-0"
-                    >
-                      {savingEmployeeId === emp.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
-                      ) : savedEmployeeId === emp.id ? (
-                        <><Check className="w-3.5 h-3.5" aria-hidden /> Guardado</>
-                      ) : (
-                        "Guardar"
-                      )}
-                    </button>
-                  </div>
+                <div key={emp.id} className="flex flex-row items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-apple-border bg-apple-bg/50 p-1.5 sm:p-3">
+                  <label htmlFor={`employee-password-${emp.id}`} className="shrink-0 w-14 sm:w-16 text-[10px] sm:text-xs font-medium text-apple-text truncate">{emp.label}</label>
+                  <input
+                    id={`employee-password-${emp.id}`}
+                    name={`employee-password-${emp.id}`}
+                    type={showPassword ? "text" : "password"}
+                    value={editingPassword[emp.id] ?? emp.password}
+                    onChange={(e) =>
+                      setEditingPassword((prev) => ({ ...prev, [emp.id]: e.target.value }))
+                    }
+                    placeholder="Contraseña"
+                    className="flex-1 min-w-0 px-2 py-1.5 sm:py-2 text-xs sm:text-sm font-mono bg-apple-surface border border-apple-border rounded-lg focus:outline-none focus:ring-2 focus:ring-apple-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onSavePassword(emp)}
+                    disabled={savingEmployeeId !== null}
+                    className="shrink-0 px-2 py-1.5 sm:px-3 sm:py-2 bg-apple-accent text-white text-[10px] sm:text-sm font-medium rounded-lg hover:opacity-90 inline-flex items-center justify-center gap-1 disabled:opacity-70"
+                  >
+                    {savingEmployeeId === emp.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
+                    ) : savedEmployeeId === emp.id ? (
+                      <Check className="w-3 h-3" aria-hidden />
+                    ) : (
+                      "Guardar"
+                    )}
+                  </button>
                 </div>
               ))}
             </div>
-            <div className="flex-shrink-0 p-2 sm:p-3 pt-0">
+            <div className="flex-shrink-0 p-1.5 sm:p-3 pt-0 hidden sm:block">
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -187,53 +235,202 @@ export default function ConfigPage() {
             </div>
           </section>
 
-          {/* En desktop, estos dos bloques quedan abajo en dos columnas (mitad y mitad) */}
-          <div className="flex flex-col md:flex-row gap-2 sm:gap-3 w-full">
+          {/* Generar pedido + Mi inventario: 2 columnas en móvil para ahorrar espacio */}
+          <div className="grid grid-cols-2 md:flex gap-2 sm:gap-3 w-full">
             {/* Generar pedido */}
-            <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden md:flex-1">
-              <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
-                <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
-                  <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
+            <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
+              <div className="flex-shrink-0 px-2 sm:px-4 py-1.5 sm:py-3 border-b border-apple-border/60 flex items-center gap-1.5 sm:gap-2 w-full">
+                <div className="flex items-center justify-center w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                  <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-xs sm:text-sm font-semibold text-apple-text truncate">Generar pedido</h2>
-                  <p className="text-[10px] sm:text-xs text-apple-text2 truncate">Faltantes y bajo 25%. WhatsApp.</p>
+                  <h2 className="text-[10px] sm:text-sm font-semibold text-apple-text truncate">Generar pedido</h2>
+                  <p className="text-[9px] sm:text-xs text-apple-text2 truncate hidden sm:block">Faltantes y bajo 25%. WhatsApp.</p>
                 </div>
               </div>
-              <div className="flex-1 md:flex-initial w-full flex items-center justify-center p-3 sm:p-4 min-h-[72px] md:min-h-0 md:py-4">
+              <div className="flex-1 md:flex-initial w-full flex items-center justify-center p-2 sm:p-4 min-h-[52px] md:min-h-0 md:py-4">
                 <button
                   type="button"
                   onClick={handleGenerateOrder}
-                  className="inline-flex items-center justify-center gap-1.5 w-full min-w-0 px-3 py-2.5 sm:py-3 bg-apple-accent text-white text-xs sm:text-sm font-medium rounded-xl hover:opacity-90 whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1 w-full min-w-0 px-2 py-2 sm:py-3 bg-apple-accent text-white text-[10px] sm:text-sm font-medium rounded-xl hover:opacity-90 whitespace-nowrap"
                 >
-                  <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
-                  Generar pedido
+                  <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Generar pedido</span>
+                  <span className="sm:hidden">Pedido</span>
                 </button>
               </div>
             </section>
 
             {/* Mi inventario */}
-            <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden md:flex-1">
-              <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
-                <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
-                  <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
+            <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
+              <div className="flex-shrink-0 px-2 sm:px-4 py-1.5 sm:py-3 border-b border-apple-border/60 flex items-center gap-1.5 sm:gap-2 w-full">
+                <div className="flex items-center justify-center w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                  <Package className="w-3 h-3 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-xs sm:text-sm font-semibold text-apple-text truncate">Mi inventario</h2>
-                  <p className="text-[10px] sm:text-xs text-apple-text2 truncate">Añade o quita productos.</p>
+                  <h2 className="text-[10px] sm:text-sm font-semibold text-apple-text truncate">Mi inventario</h2>
+                  <p className="text-[9px] sm:text-xs text-apple-text2 truncate hidden sm:block">Añade o quita productos.</p>
                 </div>
               </div>
-              <div className="flex-1 md:flex-initial w-full flex items-center justify-center p-3 sm:p-4 min-h-[72px] md:min-h-0 md:py-4">
+              <div className="flex-1 md:flex-initial w-full flex items-center justify-center p-2 sm:p-4 min-h-[52px] md:min-h-0 md:py-4">
                 <Link
                   href="/select-bottles"
-                  className="inline-flex items-center justify-center gap-1.5 w-full min-w-0 px-3 py-2.5 sm:py-3 bg-apple-accent text-white text-xs sm:text-sm font-medium rounded-xl hover:opacity-90 whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1 w-full min-w-0 px-2 py-2 sm:py-3 bg-apple-accent text-white text-[10px] sm:text-sm font-medium rounded-xl hover:opacity-90 whitespace-nowrap"
                 >
-                  <Package className="w-3.5 h-3.5 shrink-0" />
-                  Modifica tu inventario
+                  <Package className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Modifica inventario</span>
+                  <span className="sm:hidden">Inventario</span>
                 </Link>
               </div>
             </section>
           </div>
+
+          {/* Datos fiscales / CFDI */}
+          <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
+            <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xs sm:text-sm font-semibold text-apple-text truncate">Datos fiscales (CFDI)</h2>
+                <p className="text-[10px] sm:text-xs text-apple-text2 truncate">RFC, régimen y credenciales PAC para facturación electrónica.</p>
+              </div>
+            </div>
+            <div className="p-3 sm:p-4 space-y-2">
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">RFC</label>
+                <input
+                  type="text"
+                  value={cfdiForm.rfc}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, rfc: e.target.value }))}
+                  placeholder="XAXX010101000"
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">Razón social</label>
+                <input
+                  type="text"
+                  value={cfdiForm.razonSocial}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, razonSocial: e.target.value }))}
+                  placeholder="Nombre o razón social"
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">Régimen fiscal</label>
+                <select
+                  value={cfdiForm.regimenFiscal}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, regimenFiscal: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                >
+                  <option value="601">601 - General de Ley Personas Morales</option>
+                  <option value="603">603 - Personas Morales con fines no lucrativos</option>
+                  <option value="606">606 - Régimen de Incorporación Fiscal</option>
+                  <option value="612">612 - Personas Físicas con Actividades Empresariales</option>
+                  <option value="620">620 - Sociedades Cooperativas de Producción</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">Código postal</label>
+                <input
+                  type="text"
+                  value={cfdiForm.codigoPostal}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, codigoPostal: e.target.value }))}
+                  placeholder="83000"
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">URL del PAC (ej. Facturama)</label>
+                <input
+                  type="url"
+                  value={cfdiForm.pacUrl}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, pacUrl: e.target.value }))}
+                  placeholder="https://api.facturama.mx/2/cfdi"
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">Usuario PAC</label>
+                <input
+                  type="text"
+                  value={cfdiForm.pacUser}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, pacUser: e.target.value }))}
+                  placeholder="Usuario de Facturama / PAC"
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-apple-text mb-1">Contraseña PAC</label>
+                <input
+                  type="password"
+                  value={cfdiForm.pacPassword}
+                  onChange={(e) => setCfdiForm((p) => ({ ...p, pacPassword: e.target.value }))}
+                  placeholder="Contraseña del PAC"
+                  className="w-full px-3 py-2 text-sm border border-apple-border rounded-lg bg-apple-bg"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveCFDI}
+                className="w-full py-2.5 bg-apple-accent text-white text-sm font-medium rounded-xl hover:opacity-90"
+              >
+                Guardar datos fiscales
+              </button>
+            </div>
+          </section>
+
+          {/* Backup / Exportación */}
+          <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
+            <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2 w-full">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-apple-accent" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xs sm:text-sm font-semibold text-apple-text truncate">Backup / Exportación</h2>
+                <p className="text-[10px] sm:text-xs text-apple-text2 truncate">Exporta inventario, ventas, movimientos o todo.</p>
+              </div>
+            </div>
+            <div className="p-3 sm:p-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleExport("inventory")}
+                disabled={exporting !== null}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 sm:py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
+              >
+                {exporting === "inventory" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileJson className="w-4 h-4" />}
+                Exportar inventario
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("sales")}
+                disabled={exporting !== null}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 sm:py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
+              >
+                {exporting === "sales" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileJson className="w-4 h-4" />}
+                Exportar ventas
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("movements")}
+                disabled={exporting !== null}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 sm:py-3 bg-apple-bg border border-apple-border rounded-xl text-sm font-medium text-apple-text hover:bg-apple-bg/80 disabled:opacity-50"
+              >
+                {exporting === "movements" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileJson className="w-4 h-4" />}
+                Exportar movimientos
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("all")}
+                disabled={exporting !== null}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 sm:py-3 bg-apple-accent text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 col-span-2"
+              >
+                {exporting === "all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Exportar todo (backup completo)
+              </button>
+            </div>
+          </section>
         </div>
       </div>
 

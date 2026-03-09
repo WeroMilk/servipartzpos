@@ -4,6 +4,7 @@ export interface Product {
   name: string;
   category: string;
   sku?: string;
+  barcode?: string;
   price?: number;
   stock: number;
   image?: string;
@@ -49,6 +50,8 @@ export interface Sale {
   amountReceived?: number;
   change?: number;
   ticketNumber?: number;
+  cfdiUuid?: string;
+  cfdiXml?: string;
 }
 
 /** Movimiento de inventario */

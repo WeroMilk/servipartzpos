@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Bottle } from "@/lib/types";
 import { Check } from "lucide-react";
 import { getCategoryColor } from "@/lib/bottleColors";
+import { getProductImageUrl } from "@/lib/productImages";
 
 interface BottleCardProps {
   bottle: Bottle;
@@ -94,6 +95,16 @@ export default function BottleCard({ bottle, isSelected, onClick }: BottleCardPr
               loading="lazy"
               unoptimized
             />
+          ) : getProductImageUrl(bottle.id) ? (
+            <div className="relative w-full h-full min-h-[60px] rounded-lg overflow-hidden bg-white border border-apple-border/50">
+              <Image
+                src={getProductImageUrl(bottle.id)!}
+                alt={bottle.name}
+                fill
+                className="object-contain p-1"
+                sizes="80px"
+              />
+            </div>
           ) : (
             <ProductIconSvg bottle={bottle} categoryColor={categoryColor} />
           )}

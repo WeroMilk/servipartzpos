@@ -16,12 +16,14 @@ function format(date: Date): string {
   }).format(date);
 }
 
+const DEFAULT_LAST_INVENTORY = "08/03/2026, 08:05 a. m.";
+
 export function getLastInventoryComplete(): string {
-  if (typeof window === "undefined") return "—";
+  if (typeof window === "undefined") return DEFAULT_LAST_INVENTORY;
   const raw = localStorage.getItem(KEY);
-  if (!raw) return "—";
+  if (!raw) return DEFAULT_LAST_INVENTORY;
   const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? "—" : format(d);
+  return Number.isNaN(d.getTime()) ? DEFAULT_LAST_INVENTORY : format(d);
 }
 
 export function setLastInventoryComplete(): void {

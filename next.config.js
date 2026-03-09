@@ -12,25 +12,40 @@ const nextConfig = {
   async rewrites() {
     return [{ source: '/favicon.ico', destination: '/icon.svg' }];
   },
-  // CSP que PERMITE eval para que no aparezca el aviso "blocks the use of eval"
+  // CSP: unsafe-eval solo en login (/) para evitar error de eval; resto de páginas más estricto
   async headers() {
+    const cspBase = [
+      "default-src 'self'",
+      "worker-src 'self' blob:",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https:",
+      "connect-src 'self' https:",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ];
     return [
+      {
+        source: "/",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              ...cspBase,
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            ].join("; "),
+          },
+        ],
+      },
       {
         source: "/:path*",
         headers: [
           {
             key: "Content-Security-Policy",
             value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "worker-src 'self' blob:",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https:",
-              "font-src 'self' data: https:",
-              "connect-src 'self' https:",
-              "frame-ancestors 'self'",
-              "base-uri 'self'",
-              "form-action 'self'",
+              ...cspBase,
+              "script-src 'self' 'unsafe-inline'",
             ].join("; "),
           },
         ],

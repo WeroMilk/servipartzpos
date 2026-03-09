@@ -1,7 +1,9 @@
 "use client";
 
-import { Printer, ShoppingCart } from "lucide-react";
+import { useState } from "react";
+import { Printer, ShoppingCart, FileText, Loader2 } from "lucide-react";
 import { printTicket, type TicketData } from "@/lib/ticketService";
+import { generateCFDI } from "@/lib/cfdiService";
 
 interface TicketPreviewProps {
   data: TicketData;
@@ -9,7 +11,33 @@ interface TicketPreviewProps {
 }
 
 export default function TicketPreview({ data, onNewSale }: TicketPreviewProps) {
+  const [cfdiLoading, setCfdiLoading] = useState(false);
+  const [cfdiError, setCfdiError] = useState<string | null>(null);
+
   const handlePrint = () => printTicket(data);
+
+  const handleGenerarCFDI = async () => {
+    setCfdiLoading(true);
+    setCfdiError(null);
+    try {
+      const result = await generateCFDI(
+        data.items,
+        data.total,
+        data.ticketNumber,
+        data.date ?? new Date()
+      );
+      if (result.success) {
+        if (result.pdfUrl) window.open(result.pdfUrl, "_blank");
+        else if (result.uuid) alert(`CFDI generado. UUID: ${result.uuid}`);
+      } else {
+        setCfdiError(result.error ?? "Error al generar CFDI");
+      }
+    } catch (e) {
+      setCfdiError(e instanceof Error ? e.message : "Error al generar CFDI");
+    } finally {
+      setCfdiLoading(false);
+    }
+  };
 
   const date = data.date ?? new Date();
   const dateStr = date.toLocaleString("es-MX", {
@@ -61,19 +89,35 @@ export default function TicketPreview({ data, onNewSale }: TicketPreviewProps) {
           </div>
         </div>
 
-        <div className="p-4 border-t border-slate-200 flex gap-2">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-900"
-          >
-            <Printer className="w-5 h-5" />
-            Imprimir ticket
-          </button>
+        {cfdiError && (
+          <div className="px-4 py-2 bg-amber-50 border-t border-amber-200 text-amber-800 text-xs">
+            {cfdiError}
+          </div>
+        )}
+        <div className="p-4 border-t border-slate-200 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-900"
+            >
+              <Printer className="w-5 h-5" />
+              Imprimir ticket
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerarCFDI}
+              disabled={cfdiLoading}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 disabled:opacity-50"
+            >
+              {cfdiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+              Generar CFDI
+            </button>
+          </div>
           <button
             type="button"
             onClick={onNewSale}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700"
           >
             <ShoppingCart className="w-5 h-5" />
             Nueva venta

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3 } from "lucide-react";
+import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3, Store, Wifi, WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LogoutButton from "@/components/Auth/LogoutButton";
 import { demoAuth } from "@/lib/demoAuth";
@@ -25,10 +25,23 @@ const NAV_ITEMS = [
 ] as const;
 
 const ADMIN_NAV = { href: "/admin", icon: BarChart3, label: "Panel gerente" };
+const STORES_NAV = { href: "/admin/stores", icon: Store, label: "Gestión de tiendas" };
 
 export default function DashboardHeader({ leftContent, notificationsCount = 0 }: DashboardHeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const linkClass = (path: string) =>
     pathname === path ? "text-primary-600" : "text-slate-400 hover:text-white";
@@ -40,9 +53,13 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
           {/* Logo / Título */}
           <div className="flex-1 flex items-center min-w-0">
             <Link href="/caja" title="Ir a Punto de venta" className="flex items-center gap-2 shrink-0">
-              <span className="text-base sm:text-lg font-semibold text-white">Servipartz</span>
+              <img
+                src="/logo-servipartz.png"
+                alt="Servipartz"
+                className="h-8 sm:h-9 w-auto object-contain"
+              />
               <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[120px]">
-                {storeStore.getStoreName() || demoAuth.getCurrentUser()?.storeName || "POS"}
+                {storeStore.getStoreName() || demoAuth.getCurrentUser()?.storeName || "Tienda principal"}
               </span>
             </Link>
           </div>
@@ -76,14 +93,24 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
               <span>{POS_NAV.label}</span>
             </Link>
             {demoAuth.getCurrentUser()?.role === "admin" && (
-              <Link
-                href={ADMIN_NAV.href}
-                className={`touch-target-min flex items-center justify-center min-w-[36px] min-h-[36px] p-1.5 rounded-lg transition-colors ${linkClass(ADMIN_NAV.href)}`}
-                title={ADMIN_NAV.label}
-                aria-label={ADMIN_NAV.label}
-              >
-                <ADMIN_NAV.icon className="w-4 h-4 flex-shrink-0" />
-              </Link>
+              <>
+                <Link
+                  href={STORES_NAV.href}
+                  className={`touch-target-min flex items-center justify-center min-w-[36px] min-h-[36px] p-1.5 rounded-lg transition-colors ${linkClass(STORES_NAV.href)}`}
+                  title={STORES_NAV.label}
+                  aria-label={STORES_NAV.label}
+                >
+                  <STORES_NAV.icon className="w-4 h-4 flex-shrink-0" />
+                </Link>
+                <Link
+                  href={ADMIN_NAV.href}
+                  className={`touch-target-min flex items-center justify-center min-w-[36px] min-h-[36px] p-1.5 rounded-lg transition-colors ${linkClass(ADMIN_NAV.href)}`}
+                  title={ADMIN_NAV.label}
+                  aria-label={ADMIN_NAV.label}
+                >
+                  <ADMIN_NAV.icon className="w-4 h-4 flex-shrink-0" />
+                </Link>
+              </>
             )}
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => (
               <Link
@@ -105,7 +132,16 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
             ))}
           </nav>
 
-          <div className="hidden md:block ml-2">
+          <div className="hidden md:flex items-center gap-2 ml-2">
+            <span
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${
+                isOnline ? "text-emerald-400 bg-emerald-500/10" : "text-amber-400 bg-amber-500/10"
+              }`}
+              title={isOnline ? "Conectado" : "Sin conexión"}
+            >
+              {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+              {isOnline ? "Conectado" : "Offline"}
+            </span>
             <LogoutButton />
           </div>
         </div>
@@ -166,20 +202,36 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                     </Link>
                   </li>
                   {demoAuth.getCurrentUser()?.role === "admin" && (
-                    <li>
-                      <Link
-                        href={ADMIN_NAV.href}
-                        onClick={() => setMenuOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                          pathname === ADMIN_NAV.href ? "bg-primary-600/20 text-primary-400" : "text-slate-300 hover:bg-white/10"
-                        }`}
-                      >
-                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/5">
-                          <ADMIN_NAV.icon className="w-5 h-5" strokeWidth={2} />
-                        </span>
-                        <span className="font-medium text-[15px]">{ADMIN_NAV.label}</span>
-                      </Link>
-                    </li>
+                    <>
+                      <li>
+                        <Link
+                          href={STORES_NAV.href}
+                          onClick={() => setMenuOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                            pathname === STORES_NAV.href ? "bg-primary-600/20 text-primary-400" : "text-slate-300 hover:bg-white/10"
+                          }`}
+                        >
+                          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/5">
+                            <STORES_NAV.icon className="w-5 h-5" strokeWidth={2} />
+                          </span>
+                          <span className="font-medium text-[15px]">{STORES_NAV.label}</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={ADMIN_NAV.href}
+                          onClick={() => setMenuOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                            pathname === ADMIN_NAV.href ? "bg-primary-600/20 text-primary-400" : "text-slate-300 hover:bg-white/10"
+                          }`}
+                        >
+                          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/5">
+                            <ADMIN_NAV.icon className="w-5 h-5" strokeWidth={2} />
+                          </span>
+                          <span className="font-medium text-[15px]">{ADMIN_NAV.label}</span>
+                        </Link>
+                      </li>
+                    </>
                   )}
                   {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
                     const isActive = pathname === href;
@@ -207,7 +259,15 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                   })}
                 </ul>
               </nav>
-              <div className="flex-shrink-0 p-3 pt-2 border-t border-white/10">
+              <div className="flex-shrink-0 p-3 pt-2 border-t border-white/10 space-y-2">
+                <div
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm ${
+                    isOnline ? "text-emerald-400 bg-emerald-500/10" : "text-amber-400 bg-amber-500/10"
+                  }`}
+                >
+                  {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                  {isOnline ? "Conectado" : "Sin conexión"}
+                </div>
                 <LogoutButton className="!min-h-[48px] w-full justify-center rounded-xl" showText alwaysShowText />
               </div>
             </motion.aside>

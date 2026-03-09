@@ -29,6 +29,11 @@ function getHistory(): SalesHistoryEntry[] {
   }
 }
 
+/** Historial de ventas para exportación (modo demo/localStorage) */
+export function getSalesHistoryForExport(): SalesHistoryEntry[] {
+  return getHistory();
+}
+
 function saveHistory(entries: SalesHistoryEntry[]) {
   try {
     localStorage.setItem(SALES_HISTORY_KEY, JSON.stringify(entries));
@@ -287,4 +292,45 @@ export function buildReportTextForPeriod(period: ReportPeriod, periodStats: Sale
   lines.push("");
   lines.push("--- Servipartz ---");
   return lines.join("\n");
+}
+
+/** Genera HTML del reporte para imprimir (estilo ticket) */
+function buildReportHtml(text: string, title: string): string {
+  const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+  <style>
+    body { font-family: monospace; font-size: 11px; padding: 16px; max-width: 320px; margin: 0 auto; }
+    pre { white-space: pre-wrap; word-wrap: break-word; margin: 0; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <pre id="report-content">${escaped}</pre>
+</body>
+</html>`;
+}
+
+/** Imprime el reporte de ventas por período (igual que los tickets) */
+export function printReportForPeriod(period: ReportPeriod): void {
+  const periodStats = getSalesStatsForPeriod(period);
+  const text = buildReportTextForPeriod(period, periodStats);
+  const title = `Reporte ventas - ${periodStats.label}`;
+  const html = buildReportHtml(text, title);
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("Permite ventanas emergentes para imprimir el reporte");
+    return;
+  }
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 250);
 }

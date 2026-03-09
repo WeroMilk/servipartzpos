@@ -11,6 +11,8 @@ import { isMeasuredInUnits, getUnitLabel } from "@/lib/measurementRules";
 import { getLastVerification, setLastVerification, formatLastVerification } from "@/lib/lastVerification";
 import { getPortionForCategory } from "@/lib/portionStorage";
 import { getCategoryColor, getBottleOutlineColor } from "@/lib/bottleColors";
+import { getProductImageUrl } from "@/lib/productImages";
+import Image from "next/image";
 
 interface BottleDisplayProps {
   bottle: Bottle;
@@ -315,28 +317,39 @@ export default function BottleDisplay({
             </span>
           </div>
           <div className="relative flex flex-col items-center justify-center min-h-[140px] min-[400px]:min-h-[160px] sm:min-h-[180px] flex-shrink-0">
-            <svg
-              viewBox="0 0 48 48"
-              className="w-auto h-[140px] min-[400px]:h-[160px] sm:h-[180px] md:h-[200px] drop-shadow-xl flex-shrink-0"
-              style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.15))" }}
-            >
-              <defs>
-                <linearGradient id={`box-center-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={categoryColor} stopOpacity="0.9" />
-                  <stop offset="100%" stopColor={categoryColor} stopOpacity="0.6" />
-                </linearGradient>
-              </defs>
-              {/* Caja/paquete de repuesto */}
-              <path
-                d="M8 14 L24 6 L40 14 L40 34 L24 42 L8 34 Z"
-                fill={`url(#box-center-${bottle.id})`}
-                stroke={outlineColor}
-                strokeWidth="1.2"
-                strokeLinejoin="round"
-              />
-              <path d="M8 14 L24 22 L40 14" fill="none" stroke={outlineColor} strokeWidth="1" strokeOpacity="0.8" />
-              <path d="M24 6 L24 42" fill="none" stroke={outlineColor} strokeWidth="0.8" strokeOpacity="0.6" />
-            </svg>
+            {getProductImageUrl(bottle.id) ? (
+              <div className="relative w-[140px] min-[400px]:w-[160px] sm:w-[180px] md:w-[200px] h-[140px] min-[400px]:h-[160px] sm:h-[180px] md:h-[200px] rounded-xl overflow-hidden bg-white border border-apple-border shadow-lg">
+                <Image
+                  src={getProductImageUrl(bottle.id)!}
+                  alt={bottle.name}
+                  fill
+                  className="object-contain p-2"
+                  sizes="(max-width: 400px) 140px, (max-width: 640px) 160px, (max-width: 768px) 180px, 200px"
+                />
+              </div>
+            ) : (
+              <svg
+                viewBox="0 0 48 48"
+                className="w-auto h-[140px] min-[400px]:h-[160px] sm:h-[180px] md:h-[200px] drop-shadow-xl flex-shrink-0"
+                style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.15))" }}
+              >
+                <defs>
+                  <linearGradient id={`box-center-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={categoryColor} stopOpacity="0.9" />
+                    <stop offset="100%" stopColor={categoryColor} stopOpacity="0.6" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M8 14 L24 6 L40 14 L40 34 L24 42 L8 34 Z"
+                  fill={`url(#box-center-${bottle.id})`}
+                  stroke={outlineColor}
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+                <path d="M8 14 L24 22 L40 14" fill="none" stroke={outlineColor} strokeWidth="1" strokeOpacity="0.8" />
+                <path d="M24 6 L24 42" fill="none" stroke={outlineColor} strokeWidth="0.8" strokeOpacity="0.6" />
+              </svg>
+            )}
             {/* Badge porcentaje/unidades: azul como la página */}
             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 min-w-[36px] text-center text-xs font-bold py-1 px-2 rounded-full shadow bg-apple-surface border border-apple-border text-apple-accent">
               {useUnits ? remainingUnits : `${Math.round(percentage)}%`}

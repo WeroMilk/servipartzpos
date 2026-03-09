@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import PWAInstall from "@/components/PWAInstall";
 import AppHeightSync from "@/components/AppHeightSync";
+import FirebasePersistence from "@/components/FirebasePersistence";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -77,6 +78,7 @@ export default function RootLayout({
           }}
         />
         <AppHeightSync />
+        <FirebasePersistence />
         {children}
         <PWAInstall />
       </body>

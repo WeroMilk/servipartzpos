@@ -4,6 +4,8 @@ import { Bottle } from "@/lib/types";
 import { motion } from "framer-motion";
 import { getPortionForCategory } from "@/lib/portionStorage";
 import { getCategoryColor, getBottleOutlineColor } from "@/lib/bottleColors";
+import { getProductImageUrl } from "@/lib/productImages";
+import Image from "next/image";
 
 interface BottleThumbnailProps {
   bottle: Bottle;
@@ -61,30 +63,41 @@ export default function BottleThumbnail({
           : "bg-white/60 hover:bg-white border-transparent hover:border-gray-300"
       } ${isDragging ? "opacity-50 cursor-grabbing" : draggable ? "cursor-grab" : ""}`}
     >
-      {/* Icono de producto/repuesto (caja) */}
+      {/* Icono de producto/repuesto */}
       <div className="relative w-10 h-14 sm:w-12 sm:h-16 flex items-end justify-center mb-1.5">
-        <svg
-          viewBox="0 0 48 48"
-          className="w-full h-full drop-shadow-sm"
-          style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }}
-        >
-          <defs>
-            <linearGradient id={`box-fill-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={categoryColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={categoryColor} stopOpacity="0.6" />
-            </linearGradient>
-          </defs>
-          {/* Caja/paquete de repuesto */}
-          <path
-            d="M8 14 L24 6 L40 14 L40 34 L24 42 L8 34 Z"
-            fill={`url(#box-fill-${bottle.id})`}
-            stroke={outlineColor}
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-          <path d="M8 14 L24 22 L40 14" fill="none" stroke={outlineColor} strokeWidth="0.8" strokeOpacity="0.8" />
-          <path d="M24 6 L24 42" fill="none" stroke={outlineColor} strokeWidth="0.6" strokeOpacity="0.6" />
-        </svg>
+        {getProductImageUrl(bottle.id) ? (
+          <div className="relative w-full h-full rounded-lg overflow-hidden bg-white border border-apple-border/50">
+            <Image
+              src={getProductImageUrl(bottle.id)!}
+              alt={bottle.name}
+              fill
+              className="object-contain p-0.5"
+              sizes="48px"
+            />
+          </div>
+        ) : (
+          <svg
+            viewBox="0 0 48 48"
+            className="w-full h-full drop-shadow-sm"
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))" }}
+          >
+            <defs>
+              <linearGradient id={`box-fill-${bottle.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={categoryColor} stopOpacity="0.9" />
+                <stop offset="100%" stopColor={categoryColor} stopOpacity="0.6" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M8 14 L24 6 L40 14 L40 34 L24 42 L8 34 Z"
+              fill={`url(#box-fill-${bottle.id})`}
+              stroke={outlineColor}
+              strokeWidth="1"
+              strokeLinejoin="round"
+            />
+            <path d="M8 14 L24 22 L40 14" fill="none" stroke={outlineColor} strokeWidth="0.8" strokeOpacity="0.8" />
+            <path d="M24 6 L24 42" fill="none" stroke={outlineColor} strokeWidth="0.6" strokeOpacity="0.6" />
+          </svg>
+        )}
         {/* Badge: unidades (color por nivel) */}
         <div
           className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 min-w-[28px] text-center text-[9px] font-bold py-0.5 px-1.5 rounded-full shadow ${badgeStyle.bg} ${badgeStyle.text}`}

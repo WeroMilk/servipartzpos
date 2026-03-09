@@ -19,6 +19,14 @@ export const DEMO_USERS: DemoUser[] = [
     role: "admin",
     storeIds: ["default"],
   },
+  {
+    email: "gabriel@servipartz.com",
+    password: "veneno123",
+    name: "Gabriel",
+    storeName: "Servipartz Hermosillo",
+    role: "store_user",
+    storeIds: ["default"],
+  },
 ];
 
 let currentDemoUser: DemoUser | null = null;
