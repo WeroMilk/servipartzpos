@@ -267,6 +267,8 @@ function CorteContent() {
     );
   }
 
+  if (!summary) return null;
+
   const actualNum = parseFloat(actualCash.replace(",", ".")) || 0;
   const difference = actualNum - summary.expectedCash;
 
