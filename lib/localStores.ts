@@ -8,10 +8,21 @@ function loadStores(): Store[] {
     const raw = localStorage.getItem(LOCAL_STORES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Array<{ id: string; name: string; address?: string; createdAt: string }>;
-    return parsed.map((s) => ({
+    const stores = parsed.map((s) => ({
       ...s,
+      name: s.name === "Tienda principal" ? "Matriz" : s.name,
       createdAt: new Date(s.createdAt),
     }));
+    // Migrar "Tienda principal" a "Matriz" y guardar
+    const changed = stores.some((s, i) => s.name !== parsed[i]?.name);
+    if (changed) {
+      try {
+        localStorage.setItem(LOCAL_STORES_KEY, JSON.stringify(stores));
+      } catch {
+        /* ignore */
+      }
+    }
+    return stores;
   } catch {
     return [];
   }
