@@ -10,7 +10,7 @@ import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
 import { movementsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
-import { addSaleRecord } from "@/lib/salesRegistry";
+import { addSaleRecord, getProductSalesCounts } from "@/lib/salesRegistry";
 import { getCurrentShift } from "@/lib/shiftService";
 import { processQueue } from "@/lib/syncQueue";
 import { setLastSaleImport } from "@/lib/lastSaleImport";
@@ -89,14 +89,17 @@ export default function CajaPage() {
     return { id: b.id, name: b.name, stock, price: b.price ?? 0, sku: prod?.sku, barcode: prod?.barcode };
   });
 
-  const filtered = items.filter(
-    (i) =>
-      !search.trim() ||
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.sku?.toLowerCase().includes(search.toLowerCase()) ||
-      i.barcode?.toLowerCase().includes(search.toLowerCase()) ||
-      i.id === search.trim()
-  );
+  const salesCounts = getProductSalesCounts(storeId ?? "default");
+  const filtered = items
+    .filter(
+      (i) =>
+        !search.trim() ||
+        i.name.toLowerCase().includes(search.toLowerCase()) ||
+        i.sku?.toLowerCase().includes(search.toLowerCase()) ||
+        i.barcode?.toLowerCase().includes(search.toLowerCase()) ||
+        i.id === search.trim()
+    )
+    .sort((a, b) => (salesCounts[b.id] ?? 0) - (salesCounts[a.id] ?? 0));
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;

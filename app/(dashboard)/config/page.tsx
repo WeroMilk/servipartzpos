@@ -271,7 +271,7 @@ export default function ConfigPage() {
                 <p className="text-xs sm:text-sm text-apple-text2 break-words">Exporta inventario, ventas, movimientos o todo.</p>
               </div>
             </div>
-            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 -mb-2">
               <button
                 type="button"
                 onClick={() => handleExport("inventory")}

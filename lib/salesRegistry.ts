@@ -91,3 +91,15 @@ export function getSalesByStore(storeId: string, limit = 500): SaleRecord[] {
     .filter((r) => r.storeId === storeId && (r.type === "sale" || !r.type))
     .slice(0, limit);
 }
+
+/** Devuelve cantidad vendida por productId (para ordenar productos por más vendidos) */
+export function getProductSalesCounts(storeId: string): Record<string, number> {
+  const sales = getSalesByStore(storeId);
+  const counts: Record<string, number> = {};
+  for (const sale of sales) {
+    for (const item of sale.items) {
+      counts[item.productId] = (counts[item.productId] ?? 0) + item.quantity;
+    }
+  }
+  return counts;
+}
