@@ -112,7 +112,6 @@ export default function StoresPage() {
           setModal(null);
           setFormName("");
           setFormAddress("");
-          alert("Firebase tardó demasiado. La tienda se creó localmente.");
         } else {
           alert("La creación tardó demasiado. Verifica tu conexión o intenta de nuevo.");
         }
