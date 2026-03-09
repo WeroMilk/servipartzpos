@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X, ClipboardCheck } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { employeeAuth } from "@/lib/employeeAuth";
 import { demoAuth } from "@/lib/demoAuth";
@@ -10,10 +10,11 @@ import { movementsService, notificationsService } from "@/lib/movements";
 import {
   getCurrentShift,
   openShift,
-  closeShift,
   getShiftsForStore,
   type Shift,
 } from "@/lib/shiftService";
+import { calculateShiftSummary } from "@/lib/cashCountService";
+import { ArqueoSummary, summaryToArqueoData } from "@/components/Turnos/ArqueoSummary";
 
 export default function TurnosPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
@@ -24,6 +25,7 @@ export default function TurnosPage() {
   const [error, setError] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
+  const [showPreCorteModal, setShowPreCorteModal] = useState(false);
 
   const refreshShift = () => {
     if (storeId) {
@@ -73,20 +75,6 @@ export default function TurnosPage() {
       refreshShift();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al abrir turno");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCloseShift = () => {
-    if (!currentShift) return;
-    setLoading(true);
-    setError("");
-    try {
-      closeShift(currentShift.id);
-      refreshShift();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al cerrar turno");
     } finally {
       setLoading(false);
     }
@@ -147,10 +135,18 @@ export default function TurnosPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPreCorteModal(true)}
+                className="flex items-center justify-center gap-2 py-3 bg-slate-100 text-slate-800 font-semibold rounded-xl hover:bg-slate-200 border border-slate-200"
+              >
+                <ClipboardCheck className="w-5 h-5" />
+                Pre-Corte (Arqueo sin cerrar)
+              </button>
               <a
                 href={`/turnos/corte?shiftId=${currentShift.id}`}
-                className="flex-1 flex items-center justify-center gap-2 py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700"
+                className="flex items-center justify-center gap-2 py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700"
               >
                 <DollarSign className="w-5 h-5" />
                 Cerrar turno (Corte de caja)
@@ -268,6 +264,55 @@ export default function TurnosPage() {
                     Aceptar
                   </button>
                 </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showPreCorteModal && currentShift && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onClick={() => setShowPreCorteModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-emerald-600" />
+                    Pre-Corte
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreCorteModal(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Cerrar"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-slate-600 mb-4">
+                  Arqueo del turno actual. Cuenta transferencias, vouchers de la terminal, el fondo y el efectivo para verificar que todo cuadre. No cierra el turno.
+                </p>
+                <ArqueoSummary
+                  data={summaryToArqueoData(calculateShiftSummary(currentShift.id))}
+                  variant="pre-corte"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPreCorteModal(false)}
+                  className="w-full mt-6 py-3 bg-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-300"
+                >
+                  Cerrar
+                </button>
               </motion.div>
             </motion.div>
           )}

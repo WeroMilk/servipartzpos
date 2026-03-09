@@ -15,6 +15,7 @@ import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { SERVIPARTZ_INFO } from "@/lib/storeInfo";
 import type { PaymentMethod } from "@/lib/types";
+import { ArqueoSummary, summaryToArqueoData } from "@/components/Turnos/ArqueoSummary";
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: "Efectivo",
@@ -40,6 +41,8 @@ function buildCorteReportHtml(
     hour: "2-digit",
     minute: "2-digit",
   });
+  const terminal = (summary.salesByMethod.tarjeta_debito ?? 0) + (summary.salesByMethod.tarjeta_credito ?? 0) + (summary.salesByMethod.tarjeta ?? 0);
+  const transferencias = summary.salesByMethod.transferencia ?? 0;
   const salesRows = (Object.entries(cut.salesByMethod) as [PaymentMethod, number][])
     .filter(([, amt]) => amt > 0)
     .map(([m, amt]) => `<tr><td>${METHOD_LABELS[m]}</td><td style="text-align:right">$${amt.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>`)
@@ -115,6 +118,16 @@ function buildCorteReportHtml(
   <p>Corte de caja - ${dateStr}</p>
 
   <div class="section">
+    <div class="section-title">Arqueo - Cuenta esto</div>
+    <table>
+      <tr><td>Fondo inicial</td><td style="text-align:right">$${summary.initialCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
+      <tr><td>Terminal (tarjeta débito/crédito)</td><td style="text-align:right">$${terminal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
+      <tr><td>Transferencias</td><td style="text-align:right">$${transferencias.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
+      <tr class="total-row"><td>Efectivo esperado en caja</td><td style="text-align:right">$${cut.expectedCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
     <div class="section-title">Ventas por método de pago</div>
     <table>
       ${salesRows}
@@ -123,17 +136,7 @@ function buildCorteReportHtml(
   </div>
 ${detailHtml}
   <div class="section">
-    <div class="section-title">Flujo de efectivo</div>
-    <table>
-      <tr><td>Fondo inicial</td><td style="text-align:right">$${summary.initialCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
-      <tr><td>+ Efectivo cobrado</td><td style="text-align:right">$${summary.efectivoCollected.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
-      <tr><td>- Cambios dados</td><td style="text-align:right">$${summary.changeGiven.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
-      <tr class="total-row"><td>Efectivo esperado</td><td style="text-align:right">$${cut.expectedCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Conteo físico</div>
+    <div class="section-title">Conteo físico de efectivo</div>
     <table>
       <tr><td>Efectivo contado</td><td style="text-align:right">$${cut.actualCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td></tr>
       <tr class="total-row"><td>Diferencia</td><td style="text-align:right;${diffClass}">${diffText}</td></tr>
@@ -299,53 +302,18 @@ function CorteContent() {
           <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
         )}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-          <h3 className="font-semibold text-slate-900">Ventas por método de pago</h3>
-          {(
-            Object.entries(summary.salesByMethod) as [PaymentMethod, number][]
-          ).map(([method, amount]) =>
-            amount > 0 ? (
-              <div key={method} className="flex justify-between text-sm">
-                <span className="text-slate-600">{METHOD_LABELS[method]}</span>
-                <span className="font-medium">
-                  ${amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            ) : null
-          )}
-          <div className="flex justify-between font-semibold pt-2 border-t border-slate-200">
-            <span>Total ventas</span>
-            <span className="text-emerald-600">
-              ${summary.totalSales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">Fondo inicial</span>
-            <span>${summary.initialCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">+ Efectivo cobrado</span>
-            <span>${summary.efectivoCollected.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">- Cambios dados</span>
-            <span>${summary.changeGiven.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between font-semibold pt-2 border-t border-slate-200">
-            <span>Efectivo esperado</span>
-            <span className="text-emerald-600">
-              ${summary.expectedCash.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
+        <ArqueoSummary
+          data={summaryToArqueoData(summary)}
+          variant="corte"
+        />
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Efectivo contado (conteo físico)
+            Efectivo contado
           </label>
+          <p className="text-xs text-slate-500 mb-2">
+            Cuenta el efectivo en caja (fondo + cobros en efectivo - cambios dados) y escribe lo que contaste
+          </p>
           <div className="relative">
             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
