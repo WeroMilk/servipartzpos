@@ -127,23 +127,19 @@ export default function StoresPage() {
   const handleEdit = async () => {
     if (!editingStore || !formName.trim()) return;
     setActionLoading(true);
+    const updatedData = { name: formName.trim(), address: formAddress.trim() || undefined };
     try {
       if (useFirebase) {
-        await updateStore(editingStore.id, {
-          name: formName.trim(),
-          address: formAddress.trim() || undefined,
-        });
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 8000)
+        );
+        await Promise.race([updateStore(editingStore.id, updatedData), timeout]);
       } else {
-        localStores.update(editingStore.id, {
-          name: formName.trim(),
-          address: formAddress.trim() || undefined,
-        });
+        localStores.update(editingStore.id, updatedData);
       }
       setStores((prev) =>
         prev.map((s) =>
-          s.id === editingStore.id
-            ? { ...s, name: formName.trim(), address: formAddress.trim() || undefined }
-            : s
+          s.id === editingStore.id ? { ...s, ...updatedData } : s
         )
       );
       setModal(null);
@@ -151,8 +147,21 @@ export default function StoresPage() {
       setFormName("");
       setFormAddress("");
     } catch (e) {
-      console.error(e);
-      alert("Error al actualizar tienda");
+      if (e instanceof Error && e.message === "timeout" && useFirebase) {
+        localStores.upsert(editingStore.id, updatedData.name, updatedData.address);
+        setStores((prev) =>
+          prev.map((s) =>
+            s.id === editingStore.id ? { ...s, ...updatedData } : s
+          )
+        );
+        setModal(null);
+        setEditingStore(null);
+        setFormName("");
+        setFormAddress("");
+      } else {
+        console.error(e);
+        alert("Error al actualizar tienda");
+      }
     } finally {
       setActionLoading(false);
     }
@@ -164,14 +173,22 @@ export default function StoresPage() {
     setActionLoading(true);
     try {
       if (useFirebase) {
-        await deleteStore(store.id);
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 8000)
+        );
+        await Promise.race([deleteStore(store.id), timeout]);
       } else {
         localStores.delete(store.id);
       }
       setStores((prev) => prev.filter((s) => s.id !== store.id));
     } catch (e) {
-      console.error(e);
-      alert("Error al eliminar tienda");
+      if (e instanceof Error && e.message === "timeout" && useFirebase) {
+        localStores.delete(store.id);
+        setStores((prev) => prev.filter((s) => s.id !== store.id));
+      } else {
+        console.error(e);
+        alert("Error al eliminar tienda");
+      }
     } finally {
       setActionLoading(false);
     }

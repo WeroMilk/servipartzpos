@@ -67,6 +67,24 @@ export const localStores = {
     saveStores(stores);
   },
 
+  /** Actualiza si existe, o añade la tienda si no está en local (fallback desde Firebase) */
+  upsert(storeId: string, name: string, address?: string): void {
+    const stores = loadStores();
+    const idx = stores.findIndex((s) => s.id === storeId);
+    if (idx >= 0) {
+      stores[idx].name = name.trim();
+      stores[idx].address = address?.trim() || undefined;
+    } else {
+      stores.push({
+        id: storeId,
+        name: name.trim(),
+        address: address?.trim() || undefined,
+        createdAt: new Date(),
+      });
+    }
+    saveStores(stores);
+  },
+
   delete(storeId: string): void {
     const stores = loadStores().filter((s) => s.id !== storeId);
     saveStores(stores);
