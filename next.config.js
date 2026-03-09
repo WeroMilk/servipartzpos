@@ -12,7 +12,7 @@ const nextConfig = {
   async rewrites() {
     return [{ source: '/favicon.ico', destination: '/icon.svg' }];
   },
-  // CSP: unsafe-eval solo en login (/) para evitar error de eval; resto de páginas más estricto
+  // CSP: unsafe-eval necesario para Firebase, Next.js y librerías que usan eval
   async headers() {
     const cspBase = [
       "default-src 'self'",
@@ -24,29 +24,15 @@ const nextConfig = {
       "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     ];
     return [
-      {
-        source: "/",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: [
-              ...cspBase,
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-            ].join("; "),
-          },
-        ],
-      },
       {
         source: "/:path*",
         headers: [
           {
             key: "Content-Security-Policy",
-            value: [
-              ...cspBase,
-              "script-src 'self' 'unsafe-inline'",
-            ].join("; "),
+            value: cspBase.join("; "),
           },
         ],
       },

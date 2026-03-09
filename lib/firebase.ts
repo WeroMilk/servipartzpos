@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, persistentLocalCache } from "firebase/firestore";
 
 // Verificar si Firebase está configurado
 const isFirebaseConfigured = () => {
@@ -29,7 +29,15 @@ let db: any = null;
 if (isFirebaseConfigured()) {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   auth = getAuth(app);
-  db = getFirestore(app);
+  try {
+    // Usar initializeFirestore con persistentLocalCache (reemplaza enableIndexedDbPersistence deprecado)
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache(),
+    });
+  } catch {
+    // Ya inicializado (ej. HMR) - usar instancia existente
+    db = getFirestore(app);
+  }
 } else {
   // Modo demo - crear objetos mock (sin log para no ensuciar consola)
   auth = null;
