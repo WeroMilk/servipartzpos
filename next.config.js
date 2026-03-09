@@ -27,15 +27,8 @@ const nextConfig = {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     ];
     return [
-      {
-        source: "/:path*",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: cspBase.join("; "),
-          },
-        ],
-      },
+      { source: "/", headers: [{ key: "Content-Security-Policy", value: cspBase.join("; ") }] },
+      { source: "/:path*", headers: [{ key: "Content-Security-Policy", value: cspBase.join("; ") }] },
     ];
   },
   onDemandEntries: {

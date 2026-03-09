@@ -85,8 +85,17 @@ export default function StoresPage() {
     setActionLoading(true);
     try {
       if (useFirebase) {
-        const store = await createStore(formName.trim(), formAddress.trim() || undefined);
-        await initStoreProducts(store.id);
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 8000)
+        );
+        const store = await Promise.race([
+          (async () => {
+            const s = await createStore(formName.trim(), formAddress.trim() || undefined);
+            await initStoreProducts(s.id);
+            return s;
+          })(),
+          timeout,
+        ]);
         setStores((prev) => [...prev, store]);
       } else {
         const store = localStores.create(formName.trim(), formAddress.trim() || undefined);
@@ -96,8 +105,21 @@ export default function StoresPage() {
       setFormName("");
       setFormAddress("");
     } catch (e) {
-      console.error(e);
-      alert("Error al crear tienda");
+      if (e instanceof Error && e.message === "timeout") {
+        if (useFirebase) {
+          const store = localStores.create(formName.trim(), formAddress.trim() || undefined);
+          setStores((prev) => [...prev, store]);
+          setModal(null);
+          setFormName("");
+          setFormAddress("");
+          alert("Firebase tardó demasiado. La tienda se creó localmente.");
+        } else {
+          alert("La creación tardó demasiado. Verifica tu conexión o intenta de nuevo.");
+        }
+      } else {
+        console.error(e);
+        alert("Error al crear tienda");
+      }
     } finally {
       setActionLoading(false);
     }
@@ -316,8 +338,10 @@ export default function StoresPage() {
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Crear tienda</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <label htmlFor="store-name-add" className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
                 <input
+                  id="store-name-add"
+                  name="storeName"
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -326,8 +350,10 @@ export default function StoresPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Dirección (opcional)</label>
+                <label htmlFor="store-address-add" className="block text-sm font-medium text-slate-700 mb-1">Dirección (opcional)</label>
                 <input
+                  id="store-address-add"
+                  name="storeAddress"
                   type="text"
                   value={formAddress}
                   onChange={(e) => setFormAddress(e.target.value)}
@@ -365,8 +391,10 @@ export default function StoresPage() {
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Editar tienda</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <label htmlFor="store-name-edit" className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
                 <input
+                  id="store-name-edit"
+                  name="storeName"
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -375,8 +403,10 @@ export default function StoresPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Dirección (opcional)</label>
+                <label htmlFor="store-address-edit" className="block text-sm font-medium text-slate-700 mb-1">Dirección (opcional)</label>
                 <input
+                  id="store-address-edit"
+                  name="storeAddress"
                   type="text"
                   value={formAddress}
                   onChange={(e) => setFormAddress(e.target.value)}
