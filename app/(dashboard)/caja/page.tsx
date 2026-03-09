@@ -4,14 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
-import { useFirebase } from "@/lib/firebase";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
-import { getStoreProducts, addSale, updateProductStock, addMovement } from "@/lib/firestore";
 import { movementsService } from "@/lib/movements";
 import { addSalesFromImport } from "@/lib/salesReport";
-import { enqueueSale, processQueue, registerSaleLocally } from "@/lib/syncQueue";
+import { processQueue } from "@/lib/syncQueue";
 import { setLastSaleImport } from "@/lib/lastSaleImport";
 import { demoAuth } from "@/lib/demoAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
@@ -33,26 +31,15 @@ interface CartItem {
 export default function CajaPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
   const [bottles, setBottles] = useState<Bottle[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string; stock: number; price?: number; sku?: string; barcode?: string }[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [processing, setProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
 
-  const isDefaultStore = storeId === "default";
-
   const refreshData = useCallback(() => {
-    if (isDefaultStore) {
-      setBottles(loadInventoryFromStorage());
-      setProducts([]);
-    } else if (storeId && useFirebase) {
-      getStoreProducts(storeId).then((prods) => {
-        setProducts(prods.map((p) => ({ id: p.id, name: p.name, stock: p.stock, price: p.price, sku: p.sku, barcode: p.barcode })));
-        setBottles([]);
-      });
-    }
-  }, [storeId, isDefaultStore]);
+    setBottles(loadInventoryFromStorage());
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -69,16 +56,14 @@ export default function CajaPage() {
     return () => window.removeEventListener("online", syncPending);
   }, [refreshData]);
 
-  const items = isDefaultStore
-    ? bottles.map((b) => {
-        const useUnits = isMeasuredInUnits(b.category);
-        const stock = useUnits
-          ? (b.currentUnits ?? 0)
-          : Math.floor((b.currentOz ?? 0) / 29.57);
-        const prod = DEFAULT_PRODUCTS.find((p) => p.id === b.id);
-        return { id: b.id, name: b.name, stock, price: b.price ?? 0, sku: prod?.sku, barcode: prod?.barcode };
-      })
-    : products;
+  const items = bottles.map((b) => {
+    const useUnits = isMeasuredInUnits(b.category);
+    const stock = useUnits
+      ? (b.currentUnits ?? 0)
+      : Math.floor((b.currentOz ?? 0) / 29.57);
+    const prod = DEFAULT_PRODUCTS.find((p) => p.id === b.id);
+    return { id: b.id, name: b.name, stock, price: b.price ?? 0, sku: prod?.sku, barcode: prod?.barcode };
+  });
 
   const filtered = items.filter(
     (i) =>
@@ -157,103 +142,43 @@ export default function CajaPage() {
     const saleDate = new Date();
 
     try {
-      if (isDefaultStore) {
-        const currentBottles = loadInventoryFromStorage();
-        const applied = cartToProcess.map((c) => {
-          const bottle = currentBottles.find((b) => b.id === c.id);
-          if (!bottle) return null;
-          const useUnits = isMeasuredInUnits(bottle.category);
-          const idx = currentBottles.findIndex((b) => b.id === c.id);
-          if (idx === -1) return null;
-          const b = currentBottles[idx];
-          if (useUnits) {
-            const curr = b.currentUnits ?? 0;
-            const toDeduct = c.quantity;
-            const newVal = Math.max(0, curr - toDeduct);
-            currentBottles[idx] = { ...b, currentUnits: newVal };
-            return { bottleName: b.name, deducted: curr - newVal, unit: "units" as const };
-          } else {
-            const currOz = (b.currentOz ?? 0) / 29.57;
-            const toDeductOz = c.quantity;
-            const newOz = Math.max(0, currOz - toDeductOz);
-            currentBottles[idx] = { ...b, currentOz: newOz * 29.57 };
-            return { bottleName: b.name, deducted: toDeductOz, unit: "oz" as const };
-          }
-        }).filter(Boolean) as { bottleName: string; deducted: number; unit: "oz" | "units" }[];
-        saveInventory(currentBottles);
-        addSalesFromImport(
-          saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
-          saleDate
-        );
-        applied.forEach((a) => {
-          movementsService.add({
-            type: "sales_import",
-            bottleId: "_",
-            bottleName: a.bottleName,
-            newValue: a.deducted,
-            userName: demoAuth.getCurrentUser()?.name ?? "Caja",
-            description: `Venta: ${a.bottleName} -${a.deducted} ${a.unit}`,
-          });
-        });
-      } else if (storeId && useFirebase) {
-        try {
-          await addSale(
-            storeId,
-            saleItems,
-            total,
-            undefined,
-            demoAuth.getCurrentUser()?.name,
-            {
-              paymentMethod: payment.method,
-              amountReceived: payment.amountReceived,
-              change: payment.change,
-              ticketNumber,
-            }
-          );
-          for (const c of cartToProcess) {
-            const prod = products.find((p) => p.id === c.id);
-            if (prod) {
-              const newStock = Math.max(0, prod.stock - c.quantity);
-              await updateProductStock(storeId, c.id, newStock, c.name);
-              await addMovement(storeId, {
-                productId: c.id,
-                productName: c.name,
-                type: "sale",
-                oldValue: prod.stock,
-                newValue: newStock,
-                userName: demoAuth.getCurrentUser()?.name ?? "Caja",
-              });
-            }
-          }
-        } catch {
-          const productStocks = cartToProcess.map((c) => {
-            const prod = products.find((p) => p.id === c.id);
-            const newStock = prod ? Math.max(0, prod.stock - c.quantity) : 0;
-            return {
-              productId: c.id,
-              productName: c.name,
-              oldStock: prod?.stock ?? 0,
-              newStock,
-            };
-          });
-          enqueueSale({
-            type: "sale",
-            storeId,
-            items: saleItems,
-            total,
-            employeeName: demoAuth.getCurrentUser()?.name,
-            paymentMethod: payment.method,
-            amountReceived: payment.amountReceived,
-            change: payment.change,
-            ticketNumber,
-            productStocks,
-          });
-          registerSaleLocally(
-            saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
-            saleDate
-          );
+      const currentBottles = loadInventoryFromStorage();
+      const applied = cartToProcess.map((c) => {
+        const bottle = currentBottles.find((b) => b.id === c.id);
+        if (!bottle) return null;
+        const useUnits = isMeasuredInUnits(bottle.category);
+        const idx = currentBottles.findIndex((b) => b.id === c.id);
+        if (idx === -1) return null;
+        const b = currentBottles[idx];
+        if (useUnits) {
+          const curr = b.currentUnits ?? 0;
+          const toDeduct = c.quantity;
+          const newVal = Math.max(0, curr - toDeduct);
+          currentBottles[idx] = { ...b, currentUnits: newVal };
+          return { bottleName: b.name, deducted: curr - newVal, unit: "units" as const };
+        } else {
+          const currOz = (b.currentOz ?? 0) / 29.57;
+          const toDeductOz = c.quantity;
+          const newOz = Math.max(0, currOz - toDeductOz);
+          currentBottles[idx] = { ...b, currentOz: newOz * 29.57 };
+          return { bottleName: b.name, deducted: toDeductOz, unit: "oz" as const };
         }
-      }
+      }).filter(Boolean) as { bottleName: string; deducted: number; unit: "oz" | "units" }[];
+      saveInventory(currentBottles);
+      addSalesFromImport(
+        saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
+        saleDate
+      );
+      applied.forEach((a) => {
+        movementsService.add({
+          type: "sales_import",
+          bottleId: "_",
+          bottleName: a.bottleName,
+          newValue: a.deducted,
+          userName: demoAuth.getCurrentUser()?.name ?? "Caja",
+          description: `Venta: ${a.bottleName} -${a.deducted} ${a.unit}`,
+        });
+      });
 
       setLastSaleImport();
       setTicketData({
