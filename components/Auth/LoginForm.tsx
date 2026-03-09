@@ -30,6 +30,7 @@ export default function LoginForm() {
           } else {
             await createUserWithEmailAndPassword(auth, fullEmail, password);
           }
+          await auth.authStateReady();
         } catch (firebaseErr: any) {
           // Si Firebase Auth no está configurado (auth/configuration-not-found), usar demo
           if (firebaseErr?.code === "auth/configuration-not-found") {

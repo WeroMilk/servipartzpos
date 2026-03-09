@@ -8,26 +8,31 @@ import { demoAuth } from "@/lib/demoAuth";
 import { useRouter } from "next/navigation";
 import BottleSpinner from "@/components/Loading/BottleSpinner";
 
-async function loadFirebaseUserAndProfile() {
+async function loadFirebaseUserAndProfile(): Promise<boolean> {
   if (!auth?.currentUser) return false;
   const user = auth.currentUser;
+  const fallbackProfile = {
+    email: user.email ?? "",
+    name: user.displayName ?? user.email?.split("@")[0],
+    role: "store_user" as const,
+    storeIds: ["default"] as string[],
+  };
   try {
     let profile = await getUserProfile(user.uid);
     if (!profile) {
-      profile = {
-        email: user.email ?? "",
-        name: user.displayName ?? user.email?.split("@")[0],
-        role: "store_user",
-        storeIds: ["default"],
-      };
-      await setUserProfile(user.uid, profile);
+      profile = { ...fallbackProfile };
+      try {
+        await setUserProfile(user.uid, profile);
+      } catch {
+        // Firestore falló al crear; usar perfil en memoria
+      }
     }
     demoAuth.setFirebaseProfile(profile);
     return true;
   } catch (e) {
-    console.error("Error cargando perfil:", e);
-    demoAuth.clearFirebaseProfile();
-    return false;
+    console.error("Error cargando perfil de Firestore, usando fallback:", e);
+    demoAuth.setFirebaseProfile(fallbackProfile);
+    return true;
   }
 }
 
