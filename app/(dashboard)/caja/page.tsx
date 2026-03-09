@@ -177,14 +177,18 @@ export default function CajaPage() {
   const handleDiscountPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const employee = employeeAuth.validate(discountPassword);
-    if (employee) {
-      setDiscountUnlocked(true);
-      setShowDiscountPasswordModal(false);
-      setDiscountPassword("");
-      setDiscountPasswordError("");
-    } else {
+    if (!employee) {
       setDiscountPasswordError("Contraseña incorrecta");
+      return;
     }
+    if (employee.id !== "Gerente") {
+      setDiscountPasswordError("Solo el gerente (Zavala) puede autorizar descuentos");
+      return;
+    }
+    setDiscountUnlocked(true);
+    setShowDiscountPasswordModal(false);
+    setDiscountPassword("");
+    setDiscountPasswordError("");
   };
 
   const processSaleWithPayment = async (payment: {
@@ -616,10 +620,10 @@ export default function CajaPage() {
             >
               <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
                 <Lock className="w-5 h-5 text-slate-500" />
-                Contraseña de empleado
+                Contraseña del gerente
               </h3>
               <p className="text-sm text-slate-600 mb-4">
-                Se requiere autorización para aplicar descuentos (% o $)
+                Solo Zavala (gerente) puede autorizar descuentos (% o $)
               </p>
               <form onSubmit={handleDiscountPasswordSubmit} className="space-y-4">
                 <input

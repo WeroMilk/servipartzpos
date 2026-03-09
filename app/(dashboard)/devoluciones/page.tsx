@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RotateCcw, Search, Plus, Minus, Loader2, Lock } from "lucide-react";
+import { RotateCcw, Search, Plus, Minus, Loader2, Lock, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { storeStore } from "@/lib/storeStore";
 import { loadInventory, saveInventory, addStockToProduct } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
@@ -40,6 +41,7 @@ export default function DevolucionesPage() {
   const [bottles, setBottles] = useState<Bottle[]>([]);
   const [search, setSearch] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     setBottles(loadInventory());
@@ -209,7 +211,7 @@ export default function DevolucionesPage() {
       b.id === search.trim()
   );
 
-  // Vendedor (Gabriel): requiere contraseña del gerente (Piti) para acceder
+  // Vendedor (Gabriel): requiere contraseña del gerente (Zavala) para acceder
   if (isLimited && !authorized) {
     return (
       <div className="h-full min-h-0 flex flex-col items-center justify-center p-6">
@@ -221,7 +223,7 @@ export default function DevolucionesPage() {
             Autorización requerida
           </h3>
           <p className="text-sm text-slate-600 text-center mb-4">
-            Para registrar devoluciones necesitas la contraseña del gerente (Piti).
+            Para registrar devoluciones necesitas la contraseña del gerente (Zavala).
           </p>
           <input
             type="password"
@@ -456,7 +458,7 @@ export default function DevolucionesPage() {
             </div>
             <button
               type="button"
-              onClick={handleConfirmReturn}
+              onClick={() => setShowConfirmModal(true)}
               disabled={processing}
               className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -469,6 +471,65 @@ export default function DevolucionesPage() {
             </button>
           </div>
         )}
+
+        <AnimatePresence>
+          {showConfirmModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onClick={() => setShowConfirmModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Confirmar devolución</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmModal(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Cerrar"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-slate-600 mb-6">
+                  ¿Confirmas que el total a devolver es{" "}
+                  <span className="font-bold text-slate-900">
+                    ${totalAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                  </span>
+                  ?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 py-3 px-4 bg-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowConfirmModal(false);
+                      await handleConfirmReturn();
+                    }}
+                    disabled={processing}
+                    className="flex-1 py-3 px-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    Aceptar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { employeeAuth } from "@/lib/employeeAuth";
+import { demoAuth } from "@/lib/demoAuth";
 import {
   getCurrentShift,
   openShift,
@@ -33,8 +34,9 @@ export default function TurnosPage() {
     refreshShift();
   }, [storeId]);
 
-  const employees = employeeAuth.getEmployees();
-  const effectiveEmployeeId = selectedEmployeeId || employees[0]?.id || "";
+  const employees = employeeAuth.getEmployeesForCurrentUser();
+  const defaultEmpId = demoAuth.isLimitedUser() ? "001" : employees[0]?.id;
+  const effectiveEmployeeId = selectedEmployeeId || defaultEmpId || "";
 
   const handleOpenShiftClick = () => {
     const amount = parseFloat(initialCash.replace(",", ".")) || 0;

@@ -9,13 +9,15 @@ export interface Employee {
   id: string;
   label: string;
   password: string;
+  /** "gerente" = solo Zavala; "vendedor" = Gabriel, Alfonso, etc. */
+  role?: "gerente" | "vendedor";
 }
 
-/** Valores por defecto (id, label y contraseña inicial). */
+/** Valores por defecto (id, label, contraseña y rol). */
 export const EMPLOYEES: Employee[] = [
-  { id: "Gerente", label: "Piti", password: "gerente123" },
-  { id: "001", label: "Gabriel", password: "empleado001" },
-  { id: "002", label: "Alfonso", password: "empleado002" },
+  { id: "Gerente", label: "Zavala", password: "gerente123", role: "gerente" },
+  { id: "001", label: "Gabriel", password: "empleado001", role: "vendedor" },
+  { id: "002", label: "Alfonso", password: "empleado002", role: "vendedor" },
 ];
 
 function getStoredPasswords(): Record<string, string> {
@@ -47,7 +49,28 @@ export const employeeAuth = {
       id: e.id,
       label: e.label,
       password: stored[e.id] ?? e.password,
+      role: e.role,
     }));
+  },
+
+  /**
+   * Empleados visibles según el usuario logueado. Vendedores (Gabriel) solo ven vendedores; gerente (Zavala) ve todos.
+   */
+  getEmployeesForCurrentUser: (): Employee[] => {
+    const all = employeeAuth.getEmployees();
+    if (typeof window === "undefined") return all;
+    try {
+      const raw = localStorage.getItem("demo_user");
+      if (!raw) return all;
+      const user = JSON.parse(raw) as { email?: string };
+      const email = (user?.email || "").toLowerCase();
+      if (email === "gabriel@servipartz.com") {
+        return all.filter((e) => e.role === "vendedor");
+      }
+    } catch {
+      /* ignore */
+    }
+    return all;
   },
 
   /**
