@@ -1,4 +1,4 @@
-# Servipartz POS
+# SERVIPARTZ POS
 
 Sistema de punto de venta multi-sucursal para repuestos de electrodomésticos.
 

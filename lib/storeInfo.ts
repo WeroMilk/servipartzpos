@@ -1,4 +1,4 @@
-/** Datos de la tienda Servipartz para tickets y pie de página */
+/** Datos de la tienda SERVIPARTZ para tickets y pie de página */
 
 export const SERVIPARTZ_INFO = {
   name: "SERVIPARTZ",

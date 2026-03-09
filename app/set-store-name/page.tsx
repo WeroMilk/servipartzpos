@@ -77,7 +77,7 @@ export default function SetStoreNamePage() {
                   autoComplete="organization"
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="Ej: Servipartz Hermosillo"
+                  placeholder="Ej: SERVIPARTZ Hermosillo"
                   className="w-full px-4 py-3 bg-apple-surface2 border border-apple-border rounded-xl text-apple-text placeholder-apple-text2 focus:outline-none focus:ring-2 focus:ring-apple-accent focus:border-transparent"
                 />
               </div>

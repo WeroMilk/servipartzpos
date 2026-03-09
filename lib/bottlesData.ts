@@ -1,7 +1,7 @@
 import { Category, Bottle } from "./types";
 import { PRODUCT_CATEGORIES, DEFAULT_PRODUCTS } from "./productsData";
 
-/** Categorías de repuestos (electrodomésticos) - Servipartz */
+/** Categorías de repuestos (electrodomésticos) - SERVIPARTZ */
 export const categories: Category[] = PRODUCT_CATEGORIES.map((c) => ({
   id: c.id,
   name: c.label,

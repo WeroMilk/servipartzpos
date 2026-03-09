@@ -14,7 +14,7 @@ export const PRODUCT_CATEGORIES = [
 
 export type ProductCategoryId = (typeof PRODUCT_CATEGORIES)[number]["id"];
 
-/** Catálogo base de repuestos (desde Servipartz). Stock inicial variado para demo. */
+/** Catálogo base de repuestos (desde SERVIPARTZ). Stock inicial variado para demo. */
 export const DEFAULT_PRODUCTS: Omit<Product, "stock">[] = [
   // Refrigeradores (8)
   { id: "1", name: "Compresor refrigerador 1/4 HP", category: "refrigeradores", sku: "COMP-025", price: 450 },

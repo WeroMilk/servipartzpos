@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Política de Privacidad - Servipartz",
-  description: "Política de privacidad y protección de datos personales de Servipartz POS",
+  title: "Política de Privacidad - SERVIPARTZ",
+  description: "Política de privacidad y protección de datos personales de SERVIPARTZ POS",
 };
 
 export default function PrivacidadPage() {
@@ -26,7 +26,7 @@ export default function PrivacidadPage() {
           <p>
             SERVIPARTZ, con domicilio en Av. José San Healy 385, Olivares, 83180 Hermosillo, Sonora, México,
             es responsable del tratamiento de los datos personales que recaba a través de la aplicación
-            Servipartz POS (en adelante, &quot;la Aplicación&quot;).
+            SERVIPARTZ POS (en adelante, &quot;la Aplicación&quot;).
           </p>
         </section>
 

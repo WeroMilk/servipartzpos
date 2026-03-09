@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Política de Cookies - Servipartz",
-  description: "Política de cookies de Servipartz POS",
+  title: "Política de Cookies - SERVIPARTZ",
+  description: "Política de cookies de SERVIPARTZ POS",
 };
 
 export default function CookiesPage() {
@@ -52,7 +52,7 @@ export default function CookiesPage() {
           <h2 className="text-lg font-semibold text-slate-900 mb-2">3. Finalidad</h2>
           <p>
             Las cookies se utilizan exclusivamente para garantizar el correcto funcionamiento de
-            Servipartz POS, mantener su sesión activa, recordar la tienda seleccionada y permitir
+            SERVIPARTZ POS, mantener su sesión activa, recordar la tienda seleccionada y permitir
             el uso offline de la aplicación.
           </p>
         </section>

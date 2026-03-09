@@ -83,7 +83,7 @@ export default function LoginForm() {
       <div className="relative z-10 w-full max-w-md min-w-0 mx-auto -mt-16 sm:mt-0">
         <div className="bg-apple-surface/95 backdrop-blur-sm rounded-3xl shadow-xl border border-apple-border p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-3xl sm:text-4xl font-semibold text-primary-600 mb-2">Servipartz POS</h1>
+            <h1 className="text-3xl sm:text-4xl font-semibold text-primary-600 mb-2">SERVIPARTZ POS</h1>
             <p className="text-apple-text2">Repuestos de electrodomésticos · Multi-tienda</p>
           </div>
 

@@ -1,4 +1,4 @@
-/** Colores por categoría para productos (repuestos electrodomésticos) - Servipartz */
+/** Colores por categoría para productos (repuestos electrodomésticos) - SERVIPARTZ */
 export function getCategoryColor(category: string): string {
   const colors: Record<string, string> = {
     refrigeradores: "#dbeafe",

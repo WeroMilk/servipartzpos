@@ -319,7 +319,7 @@ export function getSalesStatsForShift(shiftId: string): SalesStatsForPeriod {
 /** Genera texto para descargar como .txt (resumen de todos los períodos) */
 export function buildReportText(stats: SalesStats): string {
   const lines: string[] = [
-    "Reporte de ventas - Servipartz",
+    "Reporte de ventas - SERVIPARTZ",
     `Generado: ${new Date().toLocaleString("es-ES")}`,
     "",
     "Ingresos por período",
@@ -336,7 +336,7 @@ export function buildReportText(stats: SalesStats): string {
         : `${i + 1}. ${p.name}: ${p.quantity.toFixed(1)} ${p.unit}`
     ),
     "",
-    "--- Servipartz ---",
+    "--- SERVIPARTZ ---",
   ];
   return lines.join("\n");
 }
@@ -349,7 +349,7 @@ export function buildReportTextForShift(shiftStats: SalesStatsForPeriod): string
 /** Genera texto del reporte detallado para un período (día, semana o mes) */
 export function buildReportTextForPeriod(period: ReportPeriod, periodStats: SalesStatsForPeriod): string {
   const lines: string[] = [
-    `Reporte de ventas por ${periodStats.label} - Servipartz`,
+    `Reporte de ventas por ${periodStats.label} - SERVIPARTZ`,
     `Generado: ${new Date().toLocaleString("es-ES")}`,
     "",
     "Resumen",
@@ -387,7 +387,7 @@ export function buildReportTextForPeriod(period: ReportPeriod, periodStats: Sale
   }
 
   lines.push("");
-  lines.push("--- Servipartz ---");
+  lines.push("--- SERVIPARTZ ---");
   return lines.join("\n");
 }
 

@@ -43,11 +43,11 @@ export function buildOrderReport(bottles: Bottle[]): { text: string; lines: Orde
           const name = localStorage.getItem("pos_current_store_name");
           if (name) return name;
           const u = localStorage.getItem("demo_user");
-          if (u) return (JSON.parse(u) as { storeName?: string }).storeName ?? "Servipartz";
+          if (u) return (JSON.parse(u) as { storeName?: string }).storeName ?? "SERVIPARTZ";
         } catch {}
-        return "Servipartz";
+        return "SERVIPARTZ";
       })()
-    : "Servipartz";
+    : "SERVIPARTZ";
 
   const porPedir: OrderReportLine[] = [];
   const bajo25: OrderReportLine[] = [];
@@ -110,7 +110,7 @@ export function buildOrderReport(bottles: Bottle[]): { text: string; lines: Orde
     text += "No hay productos por pedir ni por debajo del 25%. Inventario completo.\n";
   }
 
-  text += "\n--- Servipartz ---";
+  text += "\n--- SERVIPARTZ ---";
 
   return { text, lines };
 }

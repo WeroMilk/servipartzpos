@@ -281,7 +281,7 @@ export default function AdminStoresPage() {
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ej: Servipartz Hermosillo"
+                  placeholder="Ej: SERVIPARTZ Hermosillo"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -330,7 +330,7 @@ export default function AdminStoresPage() {
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ej: Servipartz Hermosillo"
+                  placeholder="Ej: SERVIPARTZ Hermosillo"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>

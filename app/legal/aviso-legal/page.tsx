@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Aviso Legal - Servipartz",
-  description: "Aviso legal y condiciones de uso de Servipartz POS",
+  title: "Aviso Legal - SERVIPARTZ",
+  description: "Aviso legal y condiciones de uso de SERVIPARTZ POS",
 };
 
 export default function AvisoLegalPage() {
@@ -24,7 +24,7 @@ export default function AvisoLegalPage() {
         <section>
           <h2 className="text-lg font-semibold text-slate-900 mb-2">1. Identificación del titular</h2>
           <p>
-            La aplicación Servipartz POS es operada por SERVIPARTZ, dedicada a la venta de repuestos
+            La aplicación SERVIPARTZ POS es operada por SERVIPARTZ, dedicada a la venta de repuestos
             de electrodomésticos.
           </p>
           <p className="mt-2">
@@ -38,7 +38,7 @@ export default function AvisoLegalPage() {
         <section>
           <h2 className="text-lg font-semibold text-slate-900 mb-2">2. Objeto</h2>
           <p>
-            El presente aviso legal regula el acceso y uso de la aplicación Servipartz POS, un sistema
+            El presente aviso legal regula el acceso y uso de la aplicación SERVIPARTZ POS, un sistema
             de punto de venta para gestión de inventario y ventas de repuestos de electrodomésticos.
           </p>
         </section>

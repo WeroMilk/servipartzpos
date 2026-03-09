@@ -16,7 +16,7 @@ export default function BottleSpinner() {
         </div>
         <div className="text-center">
           <p className="text-apple-text font-semibold text-xl tracking-tight">
-            Servipartz
+            SERVIPARTZ
           </p>
           <p className="text-apple-text2 text-sm mt-1">
             Cargando…

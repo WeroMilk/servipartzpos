@@ -1,7 +1,7 @@
 import { Bottle } from "./types";
 import { defaultBottles } from "./bottlesData";
 
-/** Clave de localStorage donde se guarda el inventario de la tienda (Servipartz POS). */
+/** Clave de localStorage donde se guarda el inventario de la tienda (SERVIPARTZ POS). */
 export const INVENTORY_KEY = "servipartz-pos-inventory";
 
 /**

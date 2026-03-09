@@ -11,7 +11,7 @@ const MAIN_SHEET_NAME = "Datos";
 export async function buildSalesOrderExcelTemplate(bottles: Bottle[]): Promise<Blob> {
   const ExcelJS = await import("exceljs");
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Servipartz";
+  wb.creator = "SERVIPARTZ";
 
   const sheet = wb.addWorksheet(MAIN_SHEET_NAME);
   sheet.getColumn(1).width = 40;
