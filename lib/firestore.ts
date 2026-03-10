@@ -465,6 +465,8 @@ export interface UserProfile {
   name?: string;
   role: "admin" | "store_user";
   storeIds?: string[];
+  currentStoreId?: string;
+  currentStoreName?: string;
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
@@ -478,6 +480,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     name: data?.name,
     role: data?.role || "store_user",
     storeIds: data?.storeIds || [],
+    currentStoreId: data?.currentStoreId,
+    currentStoreName: data?.currentStoreName,
   };
 }
 

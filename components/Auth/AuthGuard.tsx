@@ -7,6 +7,7 @@ import { getUserProfile, setUserProfile } from "@/lib/firestore";
 import { demoAuth } from "@/lib/demoAuth";
 import { useRouter } from "next/navigation";
 import BottleSpinner from "@/components/Loading/BottleSpinner";
+import { storeStore } from "@/lib/storeStore";
 
 async function loadFirebaseUserAndProfile(): Promise<boolean> {
   if (!auth?.currentUser) return false;
@@ -16,6 +17,8 @@ async function loadFirebaseUserAndProfile(): Promise<boolean> {
     name: user.displayName ?? user.email?.split("@")[0],
     role: "store_user" as const,
     storeIds: ["default"] as string[],
+    currentStoreId: "default" as string,
+    currentStoreName: "Matriz" as string,
   };
   try {
     let profile = await getUserProfile(user.uid);
@@ -28,10 +31,23 @@ async function loadFirebaseUserAndProfile(): Promise<boolean> {
       }
     }
     demoAuth.setFirebaseProfile(profile);
+    // Sincronizar tienda actual (misma en todos los dispositivos)
+    if (profile.currentStoreId) {
+      storeStore.setStore(profile.currentStoreId, profile.currentStoreName);
+    } else {
+      // Si no existe aún, inicializar en Firestore con default
+      try {
+        await setUserProfile(user.uid, { currentStoreId: "default", currentStoreName: "Matriz" });
+      } catch {
+        /* ignore */
+      }
+      storeStore.setStore("default", "Matriz");
+    }
     return true;
   } catch (e) {
     console.error("Error cargando perfil de Firestore, usando fallback:", e);
     demoAuth.setFirebaseProfile(fallbackProfile);
+    storeStore.setStore(fallbackProfile.currentStoreId, fallbackProfile.currentStoreName);
     return true;
   }
 }

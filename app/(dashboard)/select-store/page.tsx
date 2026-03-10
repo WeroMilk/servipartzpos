@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { Store, LayoutDashboard } from "lucide-react";
 import { demoAuth } from "@/lib/demoAuth";
 import { useFirebase } from "@/lib/firebase";
-import { getStores } from "@/lib/firestore";
+import { getStores, setUserProfile } from "@/lib/firestore";
 import { storeStore } from "@/lib/storeStore";
 import type { Store as StoreType } from "@/lib/types";
+import { auth } from "@/lib/firebase";
 
 export default function SelectStorePage() {
   const router = useRouter();
@@ -53,6 +54,15 @@ export default function SelectStorePage() {
 
   const handleSelect = (store: StoreType) => {
     storeStore.setStore(store.id, store.name);
+    // Guardar tienda actual en el perfil para sincronizar entre dispositivos
+    if (useFirebase && auth?.currentUser) {
+      setUserProfile(auth.currentUser.uid, {
+        currentStoreId: store.id,
+        currentStoreName: store.name,
+      }).catch(() => {
+        /* ignore */
+      });
+    }
     router.push(demoAuth.isLimitedUser() ? "/caja" : "/inventario");
   };
 

@@ -108,7 +108,6 @@ export const demoAuth = {
       storeIds: profile.storeIds ?? ["default"],
     };
     currentDemoUser = user;
-    localStorage.setItem(FIREBASE_USER_KEY, JSON.stringify(user));
   },
 
   /** Limpia perfil de Firebase (al cerrar sesión). */
@@ -120,17 +119,6 @@ export const demoAuth = {
 
   getCurrentUser: (): DemoUser | null => {
     if (currentDemoUser) return currentDemoUser;
-    // Prioridad: perfil Firebase (cuando se usa Firebase Auth)
-    const fbStored = typeof window !== "undefined" ? localStorage.getItem(FIREBASE_USER_KEY) : null;
-    if (fbStored) {
-      try {
-        const parsed = JSON.parse(fbStored) as DemoUser;
-        currentDemoUser = parsed;
-        return currentDemoUser;
-      } catch {
-        localStorage.removeItem(FIREBASE_USER_KEY);
-      }
-    }
     const stored = typeof window !== "undefined" ? localStorage.getItem("demo_user") : null;
     if (stored) {
       const parsed = JSON.parse(stored) as DemoUser & { barName?: string };
