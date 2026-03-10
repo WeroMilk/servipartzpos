@@ -13,8 +13,10 @@ import {
   getShiftsForStore,
   type Shift,
 } from "@/lib/shiftService";
-import { calculateShiftSummary } from "@/lib/cashCountService";
+import { calculateShiftSummary, calculateShiftSummaryFirestore } from "@/lib/cashCountService";
 import { ArqueoSummary, summaryToArqueoData } from "@/components/Turnos/ArqueoSummary";
+import { useFirebase } from "@/lib/firebase";
+import { openShiftFirestore, getCurrentShiftFirestore, getShiftsForStoreFirestore, type ShiftRecord } from "@/lib/firestore";
 
 export default function TurnosPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
@@ -26,16 +28,40 @@ export default function TurnosPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
   const [showPreCorteModal, setShowPreCorteModal] = useState(false);
+  const [preCorteLoading, setPreCorteLoading] = useState(false);
+  const [preCorteSummary, setPreCorteSummary] = useState<ReturnType<typeof calculateShiftSummary> | null>(null);
+
+  const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
   const refreshShift = () => {
-    if (storeId) {
-      setCurrentShift(getCurrentShift(storeId));
+    if (!storeId) return;
+    if (isCloud) {
+      getCurrentShiftFirestore(storeId)
+        .then((s) => setCurrentShift((s as unknown as Shift) ?? null))
+        .catch(() => setCurrentShift(null));
+      return;
     }
+    setCurrentShift(getCurrentShift(storeId));
   };
 
   useEffect(() => {
     refreshShift();
-  }, [storeId]);
+  }, [storeId, isCloud]);
+
+  useEffect(() => {
+    const sid = storeId ?? "default";
+    if (!showPreCorteModal || !currentShift) return;
+    setPreCorteLoading(true);
+    setPreCorteSummary(null);
+    if (isCloud) {
+      calculateShiftSummaryFirestore(sid, currentShift.id)
+        .then((s) => setPreCorteSummary(s as unknown as ReturnType<typeof calculateShiftSummary>))
+        .finally(() => setPreCorteLoading(false));
+      return;
+    }
+    setPreCorteSummary(calculateShiftSummary(currentShift.id));
+    setPreCorteLoading(false);
+  }, [showPreCorteModal, currentShift, isCloud, storeId]);
 
   const employees = employeeAuth.getEmployeesForCurrentUser();
   const defaultEmpId = demoAuth.isLimitedUser() ? "001" : employees[0]?.id;
@@ -51,7 +77,7 @@ export default function TurnosPage() {
     setShowConfirmModal(true);
   };
 
-  const handleConfirmOpenShift = () => {
+  const handleConfirmOpenShift = async () => {
     if (pendingAmount == null) return;
     const emp = employees.find((e) => e.id === effectiveEmployeeId);
     const employeeName = emp?.label ?? "Cajero";
@@ -61,16 +87,20 @@ export default function TurnosPage() {
     setLoading(true);
     setError("");
     try {
-      openShift(storeId ?? "default", employeeId, employeeName, pendingAmount);
-      movementsService.add({
-        type: "shift_open",
-        bottleId: "_",
-        bottleName: "Caja",
-        newValue: pendingAmount,
-        userName: demoAuth.getCurrentUser()?.name ?? employeeName,
-        description: `Apertura de caja: ${employeeName} - Fondo inicial $${pendingAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
-      });
-      notificationsService.incrementUnread();
+      if (isCloud) {
+        await openShiftFirestore(storeId ?? "default", employeeId, employeeName, pendingAmount);
+      } else {
+        openShift(storeId ?? "default", employeeId, employeeName, pendingAmount);
+        movementsService.add({
+          type: "shift_open",
+          bottleId: "_",
+          bottleName: "Caja",
+          newValue: pendingAmount,
+          userName: demoAuth.getCurrentUser()?.name ?? employeeName,
+          description: `Apertura de caja: ${employeeName} - Fondo inicial $${pendingAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+        });
+        notificationsService.incrementUnread();
+      }
       setInitialCash("");
       refreshShift();
     } catch (e) {
@@ -302,10 +332,17 @@ export default function TurnosPage() {
                 <p className="text-sm text-slate-600 mb-4">
                   Arqueo del turno actual. Cuenta transferencias, vouchers de la terminal, el fondo y el efectivo para verificar que todo cuadre. No cierra el turno.
                 </p>
-                <ArqueoSummary
-                  data={summaryToArqueoData(calculateShiftSummary(currentShift.id))}
-                  variant="pre-corte"
-                />
+                {preCorteLoading || !preCorteSummary ? (
+                  <div className="flex items-center justify-center py-8 text-slate-500 text-sm">
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Cargando arqueo…
+                  </div>
+                ) : (
+                  <ArqueoSummary
+                    data={summaryToArqueoData(preCorteSummary)}
+                    variant="pre-corte"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => setShowPreCorteModal(false)}
@@ -334,6 +371,20 @@ function ShiftHistory({ storeId }: { storeId: string }) {
   const [shifts, setShifts] = useState<Shift[]>([]);
 
   useEffect(() => {
+    const isCloud = storeId !== "default" && useFirebase;
+    if (isCloud) {
+      getShiftsForStoreFirestore(storeId, 200)
+        .then((all) => {
+          const closed = all.filter((s) => s.status === "closed");
+          setShifts(closed as unknown as Shift[]);
+          setPage(0);
+        })
+        .catch(() => {
+          setShifts([]);
+          setPage(0);
+        });
+      return;
+    }
     const all = getShiftsForStore(storeId, 200).filter((s) => s.status === "closed");
     setShifts(all);
     setPage(0);

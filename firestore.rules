@@ -21,6 +21,11 @@ service cloud.firestore {
       match /sales/{saleId} {
         allow read, write: if request.auth != null;
       }
+
+      // Turnos por tienda (apertura/cierre + cortes)
+      match /shifts/{shiftId} {
+        allow read, write: if request.auth != null;
+      }
       
       // Movimientos por tienda
       match /movements/{movementId} {

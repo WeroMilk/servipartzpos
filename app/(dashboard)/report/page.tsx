@@ -18,6 +18,9 @@ import { demoAuth } from "@/lib/demoAuth";
 import { storeStore } from "@/lib/storeStore";
 import { getCurrentShift } from "@/lib/shiftService";
 import { CalendarPicker } from "@/components/Report/CalendarPicker";
+import { useFirebase } from "@/lib/firebase";
+import { getStoreSales } from "@/lib/firestore";
+import type { Sale } from "@/lib/types";
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -46,6 +49,7 @@ export default function ReportPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
   const currentShift = storeId ? getCurrentShift(storeId) : null;
   const shiftStats = currentShift ? getSalesStatsForShift(currentShift.id) : null;
+  const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
   const today = new Date();
   today.setHours(23, 59, 59, 999);
@@ -54,15 +58,81 @@ export default function ReportPage() {
   const [period, setPeriod] = useState<ReportPeriod>("day");
   const [refDate, setRefDate] = useState<Date>(() => new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [cloudSales, setCloudSales] = useState<Sale[] | null>(null);
 
   const periodStats = getSalesStatsForPeriod(period, refDate);
+
+  const computeCloudPeriodStats = (sales: Sale[], p: ReportPeriod, ref: Date) => {
+    const start = new Date(ref);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    if (p === "day") {
+      end.setHours(23, 59, 59, 999);
+    } else if (p === "week") {
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setDate(1);
+      end.setMonth(start.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const filtered = sales.filter((s) => s.timestamp >= start && s.timestamp <= end);
+    const totalRevenue = filtered.reduce((acc, s) => acc + (s.total ?? 0), 0);
+    let total = 0;
+    const byProduct: Record<string, { quantity: number; revenue: number }> = {};
+    const detailLines: { name: string; quantity: number; price: number; subtotal: number }[] = [];
+    for (const sale of filtered) {
+      for (const item of sale.items ?? []) {
+        const key = item.name;
+        const price = item.price ?? 0;
+        const subtotal = price * item.quantity;
+        total += item.quantity;
+        if (!byProduct[key]) byProduct[key] = { quantity: 0, revenue: 0 };
+        byProduct[key].quantity += item.quantity;
+        byProduct[key].revenue += subtotal;
+        if (price > 0) detailLines.push({ name: item.name, quantity: item.quantity, price, subtotal });
+      }
+    }
+    const topProducts = Object.entries(byProduct)
+      .map(([name, v]) => ({ name, quantity: v.quantity, unit: "unid", revenue: v.revenue > 0 ? v.revenue : undefined }))
+      .sort((a, b) => (b.revenue ?? 0) - (a.revenue ?? 0))
+      .slice(0, 10);
+    const label =
+      p === "day"
+        ? ref.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
+        : p === "week"
+          ? `${start.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit" })} - ${end.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}`
+          : ref.toLocaleDateString("es-MX", { month: "long", year: "numeric" }).replace(/^\w/, (c) => c.toUpperCase());
+
+    return { total, totalRevenue, label, topProducts, detailLines };
+  };
 
   useEffect(() => {
     setStats(getSalesStats());
   }, []);
 
+  useEffect(() => {
+    if (!isCloud || !storeId) return;
+    getStoreSales(storeId, 365)
+      .then((s) => setCloudSales(s))
+      .catch(() => setCloudSales([]));
+  }, [isCloud, storeId]);
+
   const handleDownload = () => {
-    const text = buildReportTextForPeriod(period, periodStats);
+    const effectiveForDownload = isCloud && cloudSales
+      ? (() => {
+          const s = computeCloudPeriodStats(cloudSales, period, refDate);
+          return {
+            total: s.total,
+            totalRevenue: s.totalRevenue,
+            label: s.label,
+            topProducts: s.topProducts,
+            detailLines: s.detailLines,
+          } as any;
+        })()
+      : periodStats;
+    const text = buildReportTextForPeriod(period, effectiveForDownload);
     const dateStr = period === "month" ? toMonthString(refDate) : toDateString(refDate);
     const name = `reporte-ventas-${period}-${dateStr}.txt`;
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -175,13 +245,17 @@ export default function ReportPage() {
     );
   }
 
-  if (!stats) {
+  if ((isCloud && cloudSales === null) || (!isCloud && !stats)) {
     return (
       <div className="h-full flex items-center justify-center">
         <span className="text-apple-text2 text-sm">Cargando…</span>
       </div>
     );
   }
+
+  const effectivePeriodStats = isCloud && cloudSales
+    ? computeCloudPeriodStats(cloudSales, period, refDate)
+    : periodStats;
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
@@ -200,8 +274,10 @@ export default function ReportPage() {
             const isActive = period === p;
             const refForLabel = p === "month" ? new Date(refDate.getFullYear(), refDate.getMonth(), 1) : refDate;
             const label = formatPeriodLabelShort(p, refForLabel);
-            const statsForBox = getSalesStatsForPeriod(p, refForLabel);
-            const revenue = statsForBox.totalRevenue;
+            const statsForBox = isCloud && cloudSales
+              ? computeCloudPeriodStats(cloudSales, p, refForLabel)
+              : getSalesStatsForPeriod(p, refForLabel);
+            const revenue = (statsForBox as any).totalRevenue;
             return (
               <button
                 key={p}
@@ -248,14 +324,14 @@ export default function ReportPage() {
         <div className="flex-1 min-h-0 flex flex-col bg-apple-surface rounded-2xl border border-apple-border overflow-hidden flex-shrink-0">
           <div className="flex-shrink-0 flex items-center gap-2 p-3 border-b border-apple-border/50">
             <TrendingUp className="w-4 h-4 text-apple-accent flex-shrink-0" />
-            <h3 className="font-semibold text-apple-text text-sm">Lo más vendido ({periodStats.label})</h3>
+            <h3 className="font-semibold text-apple-text text-sm">Lo más vendido ({effectivePeriodStats.label})</h3>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3" style={{ WebkitOverflowScrolling: "touch" }}>
-            {periodStats.topProducts.length === 0 ? (
+            {effectivePeriodStats.topProducts.length === 0 ? (
               <p className="text-xs text-apple-text2 text-center py-4">Sin ventas en este período</p>
             ) : (
               <ul className="space-y-1.5">
-                {periodStats.topProducts.map((p, i) => (
+                {effectivePeriodStats.topProducts.map((p, i) => (
                   <li
                     key={`${p.name}-${i}`}
                     className="flex items-center justify-between gap-2 text-xs py-1 border-b border-apple-border/40 last:border-0"
@@ -275,23 +351,23 @@ export default function ReportPage() {
         </div>
 
         {/* Detalle de ventas: producto, cantidad, precio, subtotal */}
-        {(periodStats.detailLines.length > 0 || periodStats.totalRevenue > 0) && (
+        {((effectivePeriodStats as any).detailLines?.length > 0 || (effectivePeriodStats as any).totalRevenue > 0) && (
           <div className="flex-shrink-0 flex flex-col bg-apple-surface rounded-2xl border border-apple-border overflow-hidden">
             <div className="flex-shrink-0 p-3 border-b border-apple-border/50">
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="font-semibold text-apple-text text-sm">Detalle de ventas ({periodStats.label})</h3>
-                {periodStats.totalRevenue > 0 && (
+                <h3 className="font-semibold text-apple-text text-sm">Detalle de ventas ({effectivePeriodStats.label})</h3>
+                {(effectivePeriodStats as any).totalRevenue > 0 && (
                   <span className="text-sm font-semibold text-apple-accent shrink-0">
-                    ${periodStats.totalRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                    ${(effectivePeriodStats as any).totalRevenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                   </span>
                 )}
               </div>
               <p className="text-[10px] text-apple-text2 mt-0.5">Producto, cantidad, precio unitario y subtotal</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto max-h-48 p-3" style={{ WebkitOverflowScrolling: "touch" }}>
-              {periodStats.detailLines.length > 0 ? (
+              {((effectivePeriodStats as any).detailLines?.length ?? 0) > 0 ? (
                 <ul className="space-y-2 text-xs">
-                  {periodStats.detailLines.map((d, i) => (
+                  {(effectivePeriodStats as any).detailLines.map((d: any, i: number) => (
                     <li key={`${d.name}-${i}`} className="border-b border-apple-border/40 pb-2 last:border-0 last:pb-0">
                       <p className="font-medium text-apple-text">{d.name}</p>
                       <p className="text-apple-text2 mt-0.5">

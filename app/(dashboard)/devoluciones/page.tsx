@@ -11,6 +11,8 @@ import { movementsService, notificationsService } from "@/lib/movements";
 import { addSaleRecord, getSaleByTicket } from "@/lib/salesRegistry";
 import { demoAuth } from "@/lib/demoAuth";
 import type { Bottle, SaleItem } from "@/lib/types";
+import { useFirebase } from "@/lib/firebase";
+import { addMovement as addMovementFirestore, addSaleRecordFirestore, getSaleByTicketFirestore, getStoreProducts, updateProductStock } from "@/lib/firestore";
 
 interface ReturnItem {
   productId: string;
@@ -26,6 +28,7 @@ const DEVO_AUTH_KEY = "gabriel-devoluciones-authorized";
 
 export default function DevolucionesPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const isCloud = !!storeId && storeId !== "default" && useFirebase;
   const isLimited = demoAuth.isLimitedUser();
   const [managerPassword, setManagerPassword] = useState("");
   const [managerPasswordError, setManagerPasswordError] = useState("");
@@ -44,8 +47,26 @@ export default function DevolucionesPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
+    if (isCloud) {
+      getStoreProducts(storeId!)
+        .then((prods) => {
+          const mapped: Bottle[] = prods.map((p) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            size: 0,
+            currentOz: 0,
+            currentUnits: p.stock,
+            price: p.price ?? 0,
+            image: p.image,
+          }));
+          setBottles(mapped);
+        })
+        .catch(() => setBottles([]));
+      return;
+    }
     setBottles(loadInventory());
-  }, []);
+  }, [isCloud, storeId]);
 
   const handleManagerAuth = () => {
     if (demoAuth.verifyManagerPassword(managerPassword)) {
@@ -58,14 +79,14 @@ export default function DevolucionesPage() {
     }
   };
 
-  const handleSearchTicket = () => {
+  const handleSearchTicket = async () => {
     const num = parseInt(ticketSearch.trim(), 10);
     if (isNaN(num) || !storeId) {
       setTicketError("Ingresa un número de ticket válido");
       setTicketResult(null);
       return;
     }
-    const sale = getSaleByTicket(storeId, num);
+    const sale = isCloud ? await getSaleByTicketFirestore(storeId, num) : getSaleByTicket(storeId, num);
     if (!sale) {
       setTicketError("Ticket no encontrado");
       setTicketResult(null);
@@ -159,7 +180,8 @@ export default function DevolucionesPage() {
     }
     setProcessing(true);
     try {
-      const currentBottles = loadInventory();
+      const sid = storeId ?? "default";
+      const currentBottles = isCloud ? bottles : loadInventory();
       const saleItems: SaleItem[] = totalToReturn.map((i) => ({
         productId: i.productId,
         name: i.name,
@@ -171,31 +193,71 @@ export default function DevolucionesPage() {
         const bottle = currentBottles.find((b) => b.id === item.productId);
         if (!bottle) continue;
         const useUnits = isMeasuredInUnits(bottle.category);
-        addStockToProduct(item.productId, item.quantity, useUnits);
-        movementsService.add({
+        if (isCloud) {
+          const current = bottle.currentUnits ?? 0;
+          const next = current + item.quantity;
+          await updateProductStock(sid, item.productId, next, item.name);
+          await addMovementFirestore(sid, {
+            productId: item.productId,
+            productName: item.name,
+            type: "return",
+            oldValue: current,
+            newValue: next,
+            userName: demoAuth.getCurrentUser()?.name ?? "Sistema",
+          });
+        } else {
+          addStockToProduct(item.productId, item.quantity, useUnits);
+          movementsService.add({
+            type: "return",
+            bottleId: item.productId,
+            bottleName: item.name,
+            newValue: item.quantity,
+            userName: demoAuth.getCurrentUser()?.name ?? "Sistema",
+            description: `Devolución: ${item.name} +${item.quantity} unid`,
+          });
+        }
+      }
+      if (!isCloud) notificationsService.incrementUnread();
+
+      if (isCloud) {
+        await addSaleRecordFirestore(sid, {
+          ticketNumber: 0,
+          storeId: sid,
+          items: saleItems.map((s) => ({ ...s, quantity: -s.quantity })),
+          total: -totalAmount,
+          employeeName: demoAuth.getCurrentUser()?.name,
           type: "return",
-          bottleId: item.productId,
-          bottleName: item.name,
-          newValue: item.quantity,
-          userName: demoAuth.getCurrentUser()?.name ?? "Sistema",
-          description: `Devolución: ${item.name} +${item.quantity} unid`,
+        });
+      } else {
+        addSaleRecord({
+          ticketNumber: 0,
+          storeId: sid,
+          items: saleItems.map((s) => ({ ...s, quantity: -s.quantity })),
+          total: -totalAmount,
+          employeeName: demoAuth.getCurrentUser()?.name,
+          type: "return",
         });
       }
-      notificationsService.incrementUnread();
-
-      addSaleRecord({
-        ticketNumber: 0,
-        storeId: storeId ?? "default",
-        items: saleItems.map((s) => ({ ...s, quantity: -s.quantity })),
-        total: -totalAmount,
-        employeeName: demoAuth.getCurrentUser()?.name,
-        type: "return",
-      });
 
       setReturnItems([]);
       setTicketResult(null);
       setTicketSearch("");
-      setBottles(loadInventory());
+      if (isCloud) {
+        const prods = await getStoreProducts(sid);
+        const mapped: Bottle[] = prods.map((p) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          size: 0,
+          currentOz: 0,
+          currentUnits: p.stock,
+          price: p.price ?? 0,
+          image: p.image,
+        }));
+        setBottles(mapped);
+      } else {
+        setBottles(loadInventory());
+      }
       alert("Devolución registrada correctamente");
     } catch (e) {
       console.error(e);

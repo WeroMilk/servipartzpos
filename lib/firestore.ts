@@ -15,7 +15,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db, useFirebase } from "./firebase";
-import type { Product, Store, Sale, SaleItem, Movement, PaymentMethod } from "./types";
+import type { Product, Store, Sale, SaleItem, Movement, PaymentMethod, PaymentSplit, SaleRecord } from "./types";
 import { getDefaultProductsWithStock } from "./productsData";
 
 /** Convierte Firestore Timestamp a Date */
@@ -206,6 +206,33 @@ export async function addSale(
   return docRef.id;
 }
 
+/** Guarda una venta completa (compatible con corte/turnos). */
+export async function addSaleRecordFirestore(
+  storeId: string,
+  sale: Omit<SaleRecord, "id" | "timestamp"> & { timestamp?: Date }
+): Promise<string> {
+  if (!db || !useFirebase) throw new Error("Firebase no configurado");
+  const ref = collection(db, "stores", storeId, "sales");
+  const docRef = await addDoc(ref, {
+    storeId,
+    ticketNumber: sale.ticketNumber ?? null,
+    shiftId: sale.shiftId ?? null,
+    items: sale.items ?? [],
+    total: sale.total ?? 0,
+    subtotalBeforeDiscount: sale.subtotalBeforeDiscount ?? null,
+    discountTotal: sale.discountTotal ?? null,
+    payments: (sale.payments ?? null) as PaymentSplit[] | null,
+    paymentMethod: sale.paymentMethod ?? null,
+    amountReceived: sale.amountReceived ?? null,
+    change: sale.change ?? null,
+    employeeName: sale.employeeName ?? null,
+    type: sale.type ?? "sale",
+    originalTicketNumber: sale.originalTicketNumber ?? null,
+    timestamp: Timestamp.fromDate(sale.timestamp ?? new Date()),
+  });
+  return docRef.id;
+}
+
 export async function getStoreSales(storeId: string, maxDays = 90): Promise<Sale[]> {
   if (!db || !useFirebase) return [];
   const ref = collection(db, "stores", storeId, "sales");
@@ -232,6 +259,62 @@ export async function getStoreSales(storeId: string, maxDays = 90): Promise<Sale
     });
   }
   return sales;
+}
+
+export async function getSalesByShiftFirestore(storeId: string, shiftId: string): Promise<SaleRecord[]> {
+  if (!db || !useFirebase) return [];
+  const ref = collection(db, "stores", storeId, "sales");
+  const q = query(ref, where("shiftId", "==", shiftId), orderBy("timestamp", "desc"), limit(1000));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ticketNumber: data.ticketNumber ?? 0,
+      storeId: data.storeId ?? storeId,
+      shiftId: data.shiftId ?? shiftId,
+      items: (data.items || []) as SaleItem[],
+      total: data.total ?? 0,
+      subtotalBeforeDiscount: data.subtotalBeforeDiscount ?? undefined,
+      discountTotal: data.discountTotal ?? undefined,
+      payments: (data.payments || undefined) as PaymentSplit[] | undefined,
+      paymentMethod: data.paymentMethod ?? undefined,
+      amountReceived: data.amountReceived ?? undefined,
+      change: data.change ?? undefined,
+      timestamp: toDate(data.timestamp),
+      employeeName: data.employeeName ?? undefined,
+      type: data.type ?? "sale",
+      originalTicketNumber: data.originalTicketNumber ?? undefined,
+    } as SaleRecord;
+  });
+}
+
+export async function getSaleByTicketFirestore(storeId: string, ticketNumber: number): Promise<SaleRecord | null> {
+  if (!db || !useFirebase) return null;
+  const ref = collection(db, "stores", storeId, "sales");
+  const q = query(ref, where("ticketNumber", "==", ticketNumber), orderBy("timestamp", "desc"), limit(1));
+  const snap = await getDocs(q);
+  const first = snap.docs[0];
+  if (!first) return null;
+  const data = first.data();
+  return {
+    id: first.id,
+    ticketNumber: data.ticketNumber ?? ticketNumber,
+    storeId: data.storeId ?? storeId,
+    shiftId: data.shiftId ?? undefined,
+    items: (data.items || []) as SaleItem[],
+    total: data.total ?? 0,
+    subtotalBeforeDiscount: data.subtotalBeforeDiscount ?? undefined,
+    discountTotal: data.discountTotal ?? undefined,
+    payments: (data.payments || undefined) as PaymentSplit[] | undefined,
+    paymentMethod: data.paymentMethod ?? undefined,
+    amountReceived: data.amountReceived ?? undefined,
+    change: data.change ?? undefined,
+    timestamp: toDate(data.timestamp),
+    employeeName: data.employeeName ?? undefined,
+    type: data.type ?? "sale",
+    originalTicketNumber: data.originalTicketNumber ?? undefined,
+  } as SaleRecord;
 }
 
 /** Obtiene ventas de todas las tiendas (para admin) */
@@ -276,6 +359,103 @@ export async function getStoreMovements(storeId: string, limitCount = 100): Prom
       userName: data.userName || "",
     };
   });
+}
+
+// --- Shifts ---
+
+export interface ShiftRecord {
+  id: string;
+  storeId: string;
+  employeeId: string;
+  employeeName: string;
+  openedAt: Date;
+  closedAt?: Date;
+  initialCash: number;
+  status: "open" | "closed";
+}
+
+export async function openShiftFirestore(
+  storeId: string,
+  employeeId: string,
+  employeeName: string,
+  initialCash: number
+): Promise<string> {
+  if (!db || !useFirebase) throw new Error("Firebase no configurado");
+  const ref = collection(db, "stores", storeId, "shifts");
+  const docRef = await addDoc(ref, {
+    storeId,
+    employeeId,
+    employeeName,
+    openedAt: Timestamp.now(),
+    closedAt: null,
+    initialCash,
+    status: "open",
+  });
+  return docRef.id;
+}
+
+export async function closeShiftFirestore(storeId: string, shiftId: string): Promise<void> {
+  if (!db || !useFirebase) throw new Error("Firebase no configurado");
+  const ref = doc(db, "stores", storeId, "shifts", shiftId);
+  await updateDoc(ref, { status: "closed", closedAt: Timestamp.now() });
+}
+
+export async function getCurrentShiftFirestore(storeId: string): Promise<ShiftRecord | null> {
+  if (!db || !useFirebase) return null;
+  const ref = collection(db, "stores", storeId, "shifts");
+  const q = query(ref, where("status", "==", "open"), orderBy("openedAt", "desc"), limit(1));
+  const snap = await getDocs(q);
+  const first = snap.docs[0];
+  if (!first) return null;
+  const data = first.data();
+  return {
+    id: first.id,
+    storeId: data.storeId ?? storeId,
+    employeeId: data.employeeId ?? "",
+    employeeName: data.employeeName ?? "",
+    openedAt: toDate(data.openedAt),
+    closedAt: data.closedAt ? toDate(data.closedAt) : undefined,
+    initialCash: data.initialCash ?? 0,
+    status: data.status ?? "open",
+  };
+}
+
+export async function getShiftsForStoreFirestore(storeId: string, limitCount = 50): Promise<ShiftRecord[]> {
+  if (!db || !useFirebase) return [];
+  const ref = collection(db, "stores", storeId, "shifts");
+  const q = query(ref, orderBy("openedAt", "desc"), limit(limitCount));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      storeId: data.storeId ?? storeId,
+      employeeId: data.employeeId ?? "",
+      employeeName: data.employeeName ?? "",
+      openedAt: toDate(data.openedAt),
+      closedAt: data.closedAt ? toDate(data.closedAt) : undefined,
+      initialCash: data.initialCash ?? 0,
+      status: data.status ?? "open",
+    } as ShiftRecord;
+  });
+}
+
+export async function getShiftByIdFirestore(storeId: string, shiftId: string): Promise<ShiftRecord | null> {
+  if (!db || !useFirebase) return null;
+  const ref = doc(db, "stores", storeId, "shifts", shiftId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    id: snap.id,
+    storeId: data.storeId ?? storeId,
+    employeeId: data.employeeId ?? "",
+    employeeName: data.employeeName ?? "",
+    openedAt: toDate(data.openedAt),
+    closedAt: data.closedAt ? toDate(data.closedAt) : undefined,
+    initialCash: data.initialCash ?? 0,
+    status: data.status ?? "open",
+  } as ShiftRecord;
 }
 
 // --- Users (perfil con rol) ---

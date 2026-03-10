@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { DollarSign, Loader2, Check, Printer } from "lucide-react";
 import {
   calculateShiftSummary,
+  calculateShiftSummaryFirestore,
   saveCashCount,
   type CashCount,
 } from "@/lib/cashCountService";
@@ -16,6 +17,8 @@ import { demoAuth } from "@/lib/demoAuth";
 import { SERVIPARTZ_INFO } from "@/lib/storeInfo";
 import type { PaymentMethod } from "@/lib/types";
 import { ArqueoSummary, summaryToArqueoData } from "@/components/Turnos/ArqueoSummary";
+import { useFirebase } from "@/lib/firebase";
+import { getSalesByShiftFirestore, closeShiftFirestore, getShiftByIdFirestore } from "@/lib/firestore";
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   efectivo: "Efectivo",
@@ -153,20 +156,25 @@ ${detailHtml}
 
 function printCorteReport(cut: CashCount, summary: ShiftSummary) {
   const storeName = storeStore.getStoreName() ?? "Matriz";
-  const sales = getSalesByShift(cut.shiftId);
-  const html = buildCorteReportHtml(cut, summary, storeName, sales);
-  const win = window.open("", "_blank");
-  if (!win) {
-    alert("Permite ventanas emergentes para imprimir el reporte");
-    return;
-  }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(() => {
-    win.print();
-    win.close();
-  }, 250);
+  const storeId = storeStore.getStoreId() ?? "default";
+  const isCloud = storeId !== "default" && useFirebase;
+  const run = async () => {
+    const sales = isCloud ? await getSalesByShiftFirestore(storeId, cut.shiftId) : getSalesByShift(cut.shiftId);
+    const html = buildCorteReportHtml(cut, summary, storeName, sales as any);
+    const win = window.open("", "_blank");
+    if (!win) {
+      alert("Permite ventanas emergentes para imprimir el reporte");
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      win.print();
+      win.close();
+    }, 250);
+  };
+  run();
 }
 
 function CorteContent() {
@@ -183,6 +191,20 @@ function CorteContent() {
 
   useEffect(() => {
     if (shiftId) {
+      const storeId = storeStore.getStoreId() ?? "default";
+      const isCloud = storeId !== "default" && useFirebase;
+      if (isCloud) {
+        getShiftByIdFirestore(storeId, shiftId).then((shift) => {
+          if (!shift || shift.status === "closed") {
+            setError("Turno no encontrado o ya cerrado");
+            return;
+          }
+          calculateShiftSummaryFirestore(storeId, shiftId)
+            .then((s) => setSummary(s as unknown as ReturnType<typeof calculateShiftSummary>))
+            .catch(() => setError("No se pudo cargar el resumen del turno"));
+        });
+        return;
+      }
       const shift = getShiftById(shiftId);
       if (!shift || shift.status === "closed") {
         setError("Turno no encontrado o ya cerrado");
@@ -194,7 +216,7 @@ function CorteContent() {
     }
   }, [shiftId]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!shiftId || !summary) return;
     const actual = parseFloat(actualCash.replace(",", ".")) || 0;
     if (actual < 0) {
@@ -204,18 +226,34 @@ function CorteContent() {
     setLoading(true);
     setError("");
     try {
+      const storeId = storeStore.getStoreId() ?? "default";
+      const isCloud = storeId !== "default" && useFirebase;
       const shift = getShiftById(shiftId);
-      const cut = saveCashCount(shiftId, actual, summary);
-      closeShift(shiftId);
-      movementsService.add({
-        type: "shift_close",
-        bottleId: "_",
-        bottleName: "Caja",
-        newValue: actual,
-        userName: demoAuth.getCurrentUser()?.name ?? shift?.employeeName ?? "Sistema",
-        description: `Cierre de caja: turno de ${shift?.employeeName ?? "—"} - Efectivo contado $${actual.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
-      });
-      notificationsService.incrementUnread();
+      const cut: CashCount = isCloud
+        ? {
+            shiftId,
+            expectedCash: summary.expectedCash,
+            actualCash: actual,
+            difference: actual - summary.expectedCash,
+            salesByMethod: summary.salesByMethod,
+            totalSales: summary.totalSales,
+            closedAt: new Date(),
+          }
+        : saveCashCount(shiftId, actual, summary);
+      if (isCloud) {
+        await closeShiftFirestore(storeId, shiftId);
+      } else {
+        closeShift(shiftId);
+        movementsService.add({
+          type: "shift_close",
+          bottleId: "_",
+          bottleName: "Caja",
+          newValue: actual,
+          userName: demoAuth.getCurrentUser()?.name ?? shift?.employeeName ?? "Sistema",
+          description: `Cierre de caja: turno de ${shift?.employeeName ?? "—"} - Efectivo contado $${actual.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+        });
+        notificationsService.incrementUnread();
+      }
       setSavedCut(cut);
       setSavedSummary(summary);
       setCutSaved(true);

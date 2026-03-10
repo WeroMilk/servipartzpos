@@ -5,6 +5,8 @@
 import type { PaymentMethod } from "./types";
 import { getSalesByShift } from "./salesRegistry";
 import { getShiftById } from "./shiftService";
+import { useFirebase } from "./firebase";
+import { getSalesByShiftFirestore, getShiftByIdFirestore } from "./firestore";
 
 export interface CashCount {
   shiftId: string;
@@ -95,6 +97,59 @@ export function calculateShiftSummary(shiftId: string): {
   const totalSales = sales.reduce((a, s) => a + s.total, 0);
   const expectedCash = shift.initialCash + efectivoCollected - changeGiven;
 
+  return {
+    salesByMethod,
+    totalSales,
+    efectivoCollected,
+    changeGiven,
+    expectedCash,
+    initialCash: shift.initialCash,
+  };
+}
+
+/** Igual que calculateShiftSummary, pero leyendo ventas/turno desde Firestore. */
+export async function calculateShiftSummaryFirestore(storeId: string, shiftId: string): Promise<{
+  salesByMethod: Record<PaymentMethod, number>;
+  totalSales: number;
+  efectivoCollected: number;
+  changeGiven: number;
+  expectedCash: number;
+  initialCash: number;
+}> {
+  if (!useFirebase) return calculateShiftSummary(shiftId);
+  const sales = await getSalesByShiftFirestore(storeId, shiftId);
+  const shift = await getShiftByIdFirestore(storeId, shiftId);
+  if (!shift) {
+    return {
+      salesByMethod: { ...DEFAULT_BY_METHOD },
+      totalSales: 0,
+      efectivoCollected: 0,
+      changeGiven: 0,
+      expectedCash: 0,
+      initialCash: 0,
+    };
+  }
+
+  const salesByMethod: Record<PaymentMethod, number> = { ...DEFAULT_BY_METHOD };
+  let efectivoCollected = 0;
+  let changeGiven = 0;
+
+  for (const sale of sales) {
+    if (sale.payments && sale.payments.length > 0) {
+      for (const p of sale.payments) {
+        salesByMethod[p.method] = (salesByMethod[p.method] ?? 0) + p.amount;
+        if (p.method === "efectivo") efectivoCollected += p.amount;
+      }
+    } else if (sale.paymentMethod) {
+      const m = sale.paymentMethod as PaymentMethod;
+      salesByMethod[m] = (salesByMethod[m] ?? 0) + sale.total;
+      if (m === "efectivo") efectivoCollected += sale.total;
+    }
+    changeGiven += sale.change ?? 0;
+  }
+
+  const totalSales = sales.reduce((a, s) => a + s.total, 0);
+  const expectedCash = shift.initialCash + efectivoCollected - changeGiven;
   return {
     salesByMethod,
     totalSales,

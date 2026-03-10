@@ -19,6 +19,8 @@ import { demoAuth } from "@/lib/demoAuth";
 import { employeeAuth } from "@/lib/employeeAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
 import { getProductImageUrl } from "@/lib/productImages";
+import { useFirebase } from "@/lib/firebase";
+import { getStoreProducts, updateProductStock, addMovement as addMovementFirestore, addSaleRecordFirestore, getCurrentShiftFirestore } from "@/lib/firestore";
 import PaymentModal from "@/components/Caja/PaymentModal";
 import TicketPreview from "@/components/Caja/TicketPreview";
 import type { Bottle, PaymentMethod } from "@/lib/types";
@@ -48,13 +50,27 @@ export default function CajaPage() {
   const [showDiscountPasswordModal, setShowDiscountPasswordModal] = useState(false);
   const [discountPassword, setDiscountPassword] = useState("");
   const [discountPasswordError, setDiscountPasswordError] = useState("");
+  const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
+
+  const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
   const checkShift = useCallback(() => {
-    if (storeId) {
-      setHasOpenShift(!!getCurrentShift(storeId));
-    } else {
-      setHasOpenShift(!!getCurrentShift("default"));
+    const sid = storeId ?? "default";
+    if (isCloud) {
+      getCurrentShiftFirestore(sid)
+        .then((shift) => {
+          setHasOpenShift(!!shift);
+          setCurrentShiftId(shift?.id ?? null);
+        })
+        .catch(() => {
+          setHasOpenShift(false);
+          setCurrentShiftId(null);
+        });
+      return;
     }
+    const local = getCurrentShift(sid);
+    setHasOpenShift(!!local);
+    setCurrentShiftId(local?.id ?? null);
   }, [storeId]);
 
   useEffect(() => {
@@ -68,8 +84,30 @@ export default function CajaPage() {
   }, [checkShift]);
 
   const refreshData = useCallback(() => {
+    const sid = storeId ?? "default";
+    if (isCloud) {
+      getStoreProducts(sid)
+        .then((prods) => {
+          // Adaptar Product -> Bottle para reutilizar UI existente
+          const mapped: Bottle[] = prods.map((p) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            size: 0,
+            currentOz: 0,
+            currentUnits: p.stock,
+            price: p.price ?? 0,
+            image: p.image,
+          }));
+          setBottles(mapped);
+        })
+        .catch(() => {
+          setBottles([]);
+        });
+      return;
+    }
     setBottles(loadInventoryFromStorage());
-  }, []);
+  }, [isCloud, storeId]);
 
   useEffect(() => {
     refreshData();
@@ -77,6 +115,7 @@ export default function CajaPage() {
 
   useEffect(() => {
     const syncPending = () => {
+      if (isCloud) return;
       processQueue().then((n) => {
         if (n > 0) refreshData();
       });
@@ -84,7 +123,7 @@ export default function CajaPage() {
     if (navigator.onLine) syncPending();
     window.addEventListener("online", syncPending);
     return () => window.removeEventListener("online", syncPending);
-  }, [refreshData]);
+  }, [refreshData, isCloud]);
 
   const items = bottles.map((b) => {
     const useUnits = isMeasuredInUnits(b.category);
@@ -95,7 +134,7 @@ export default function CajaPage() {
     return { id: b.id, name: b.name, stock, price: b.price ?? 0, sku: prod?.sku, barcode: prod?.barcode };
   });
 
-  const salesCounts = getProductSalesCounts(storeId ?? "default");
+  const salesCounts = isCloud ? {} : getProductSalesCounts(storeId ?? "default");
   const filtered = items
     .filter(
       (i) =>
@@ -215,64 +254,100 @@ export default function CajaPage() {
     const saleDate = new Date();
 
     try {
-      const currentBottles = loadInventoryFromStorage();
-      const applied = cartToProcess.map((c) => {
-        const bottle = currentBottles.find((b) => b.id === c.id);
-        if (!bottle) return null;
-        const useUnits = isMeasuredInUnits(bottle.category);
-        const idx = currentBottles.findIndex((b) => b.id === c.id);
-        if (idx === -1) return null;
-        const b = currentBottles[idx];
-        if (useUnits) {
-          const curr = b.currentUnits ?? 0;
-          const toDeduct = c.quantity;
-          const newVal = Math.max(0, curr - toDeduct);
-          currentBottles[idx] = { ...b, currentUnits: newVal };
-          return { bottleName: b.name, deducted: curr - newVal, unit: "units" as const };
-        } else {
-          const currOz = (b.currentOz ?? 0) / 29.57;
-          const toDeductOz = c.quantity;
-          const newOz = Math.max(0, currOz - toDeductOz);
-          currentBottles[idx] = { ...b, currentOz: newOz * 29.57 };
-          return { bottleName: b.name, deducted: toDeductOz, unit: "oz" as const };
-        }
-      }).filter(Boolean) as { bottleName: string; deducted: number; unit: "oz" | "units" }[];
-      saveInventory(currentBottles);
-      addSalesFromImport(
-        saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
-        saleDate,
-        discountTotal > 0 ? total : undefined
-      );
-      applied.forEach((a) => {
-        movementsService.add({
-          type: "sales_import",
-          bottleId: "_",
-          bottleName: a.bottleName,
-          newValue: a.deducted,
-          userName: demoAuth.getCurrentUser()?.name ?? "Caja",
-          description: `Venta: ${a.bottleName} -${a.deducted} ${a.unit}`,
-        });
-      });
-      notificationsService.incrementUnread();
-
-      setLastSaleImport();
+      const sid = storeId ?? "default";
       const payments = payment.payments ?? [];
-      const currentShift = getCurrentShift(storeId ?? "default");
-      addSaleRecord({
-        ticketNumber,
-        storeId: storeId ?? "default",
-        shiftId: currentShift?.id,
-        items: saleItems,
-        total,
-        subtotalBeforeDiscount: discountTotal > 0 ? subtotalBeforeDiscount : undefined,
-        discountTotal: discountTotal > 0 ? discountTotal : undefined,
-        payments: payments.length ? payments : undefined,
-        paymentMethod: payments.length ? undefined : payment.method,
-        amountReceived: payment.amountReceived,
-        change: payment.change,
-        employeeName: demoAuth.getCurrentUser()?.name,
-        type: "sale",
-      });
+
+      if (isCloud) {
+        // Actualizar stock en Firestore y registrar movimientos/venta en la nube
+        for (const c of cartToProcess) {
+          const bottle = bottles.find((b) => b.id === c.id);
+          const current = bottle?.currentUnits ?? 0;
+          const next = Math.max(0, current - c.quantity);
+          await updateProductStock(sid, c.id, next, c.name);
+          await addMovementFirestore(sid, {
+            productId: c.id,
+            productName: c.name,
+            type: "sale",
+            oldValue: current,
+            newValue: next,
+            userName: demoAuth.getCurrentUser()?.name ?? "Caja",
+          });
+        }
+
+        await addSaleRecordFirestore(sid, {
+          ticketNumber,
+          storeId: sid,
+          shiftId: currentShiftId ?? undefined,
+          items: saleItems,
+          total,
+          subtotalBeforeDiscount: discountTotal > 0 ? subtotalBeforeDiscount : undefined,
+          discountTotal: discountTotal > 0 ? discountTotal : undefined,
+          payments: payments.length ? payments : undefined,
+          paymentMethod: payments.length ? undefined : payment.method,
+          amountReceived: payment.amountReceived,
+          change: payment.change,
+          employeeName: demoAuth.getCurrentUser()?.name,
+          type: "sale",
+        });
+      } else {
+        const currentBottles = loadInventoryFromStorage();
+        const applied = cartToProcess.map((c) => {
+          const bottle = currentBottles.find((b) => b.id === c.id);
+          if (!bottle) return null;
+          const useUnits = isMeasuredInUnits(bottle.category);
+          const idx = currentBottles.findIndex((b) => b.id === c.id);
+          if (idx === -1) return null;
+          const b = currentBottles[idx];
+          if (useUnits) {
+            const curr = b.currentUnits ?? 0;
+            const toDeduct = c.quantity;
+            const newVal = Math.max(0, curr - toDeduct);
+            currentBottles[idx] = { ...b, currentUnits: newVal };
+            return { bottleName: b.name, deducted: curr - newVal, unit: "units" as const };
+          } else {
+            const currOz = (b.currentOz ?? 0) / 29.57;
+            const toDeductOz = c.quantity;
+            const newOz = Math.max(0, currOz - toDeductOz);
+            currentBottles[idx] = { ...b, currentOz: newOz * 29.57 };
+            return { bottleName: b.name, deducted: toDeductOz, unit: "oz" as const };
+          }
+        }).filter(Boolean) as { bottleName: string; deducted: number; unit: "oz" | "units" }[];
+        saveInventory(currentBottles);
+        addSalesFromImport(
+          saleItems.map((s) => ({ name: s.name, quantity: s.quantity, price: s.price })),
+          saleDate,
+          discountTotal > 0 ? total : undefined
+        );
+        applied.forEach((a) => {
+          movementsService.add({
+            type: "sales_import",
+            bottleId: "_",
+            bottleName: a.bottleName,
+            newValue: a.deducted,
+            userName: demoAuth.getCurrentUser()?.name ?? "Caja",
+            description: `Venta: ${a.bottleName} -${a.deducted} ${a.unit}`,
+          });
+        });
+        notificationsService.incrementUnread();
+
+        setLastSaleImport();
+        const currentShift = getCurrentShift(sid);
+        addSaleRecord({
+          ticketNumber,
+          storeId: sid,
+          shiftId: currentShift?.id,
+          items: saleItems,
+          total,
+          subtotalBeforeDiscount: discountTotal > 0 ? subtotalBeforeDiscount : undefined,
+          discountTotal: discountTotal > 0 ? discountTotal : undefined,
+          payments: payments.length ? payments : undefined,
+          paymentMethod: payments.length ? undefined : payment.method,
+          amountReceived: payment.amountReceived,
+          change: payment.change,
+          employeeName: demoAuth.getCurrentUser()?.name,
+          type: "sale",
+        });
+      }
       const paymentMethod = payments.length ? payments[0].method : payment.method ?? "efectivo";
       setTicketData({
         items: saleItems,
