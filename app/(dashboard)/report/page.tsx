@@ -262,7 +262,7 @@ export default function ReportPage() {
         </p>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col p-4 gap-3 w-full" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col p-4 gap-3 w-full overflow-touch">
         {/* Selectores de período: Día, Semana, Mes - clickeables, abren calendario */}
         <div className="grid grid-cols-3 gap-2 flex-shrink-0">
           {(["day", "week", "month"] as const).map((p) => {
@@ -321,7 +321,7 @@ export default function ReportPage() {
             <TrendingUp className="w-4 h-4 text-apple-accent flex-shrink-0" />
             <h3 className="font-semibold text-apple-text text-sm">Lo más vendido ({effectivePeriodStats.label})</h3>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 overflow-touch">
             {effectivePeriodStats.topProducts.length === 0 ? (
               <p className="text-xs text-apple-text2 text-center py-4">Sin ventas en este período</p>
             ) : (
@@ -359,7 +359,7 @@ export default function ReportPage() {
               </div>
               <p className="text-[10px] text-apple-text2 mt-0.5">Producto, cantidad, precio unitario y subtotal</p>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto max-h-48 p-3" style={{ WebkitOverflowScrolling: "touch" }}>
+            <div className="flex-1 min-h-0 overflow-y-auto max-h-48 p-3 overflow-touch">
               {((effectivePeriodStats as any).detailLines?.length ?? 0) > 0 ? (
                 <ul className="space-y-2 text-xs">
                   {(effectivePeriodStats as any).detailLines.map((d: any, i: number) => (

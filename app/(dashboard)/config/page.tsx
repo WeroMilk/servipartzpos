@@ -172,7 +172,7 @@ export default function ConfigPage() {
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-apple-bg">
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col items-stretch px-2 sm:px-4 lg:px-6 py-2 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col items-stretch px-2 sm:px-4 lg:px-6 py-2 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-3 overflow-touch" style={{ WebkitOverflowScrolling: "touch" }}>
         <div className="flex-1 min-h-0 min-w-0 flex flex-col gap-2 sm:gap-3 w-full max-w-6xl mx-auto">
           {/* Cambiar tienda + Datos fiscales: lado a lado en desktop */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
