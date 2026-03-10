@@ -7,8 +7,8 @@ import { motion } from "framer-motion";
 import { Check, X, Edit, Settings, ChevronLeft, ChevronRight, Package, Type, Calendar, FileSpreadsheet, ArrowLeftRight, ClipboardCheck, Lock, RotateCcw, DollarSign } from "lucide-react";
 import { isBeerBottleId } from "@/lib/measurementRules";
 import { useFirebase } from "@/lib/firebase";
-import { getStoreMovements } from "@/lib/firestore";
 import { storeStore } from "@/lib/storeStore";
+import { useMovements } from "@/lib/hooks/useMovements";
 
 /** Items por página: en móvil sin scroll (reducir boxes para que todo quepa).
  * Móvil: 8 si hay altura suficiente; 7 si el 8º quedaría cortado (~820px). */
@@ -34,40 +34,33 @@ export default function MovementsPage() {
     typeof window !== "undefined" ? getItemsPerPage(window.innerWidth, window.innerHeight) : 7
   );
 
+  const { movements: cloudMovements, loading } = useMovements(storeId, 200);
+
   useEffect(() => {
     if (isCloud) {
-      getStoreMovements(storeId!, 200)
-        .then((all) => {
-          // Adaptar Movement (cloud) -> Movement (UI local)
-          const mapped: Movement[] = all.map((m) => ({
-            id: m.id,
-            bottleId: m.productId,
-            bottleName: m.productName,
-            type:
-              m.type === "sale"
-                ? "sales_import"
-                : m.type === "return"
-                  ? "return"
-                  : "edit",
-            oldValue: m.oldValue,
-            newValue: m.newValue,
-            timestamp: m.timestamp,
-            userName: m.userName,
-            description: m.type === "sale"
-              ? `Venta: ${m.productName} -${Math.max(0, (m.oldValue ?? 0) - (m.newValue ?? 0))} unid`
-              : m.type === "return"
-                ? `Devolución: ${m.productName} +${Math.max(0, (m.newValue ?? 0) - (m.oldValue ?? 0))} unid`
-                : undefined,
-          }));
-          setMovements(mapped.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        })
-        .catch(() => setMovements([]));
+      // Adaptar Movement (cloud) -> Movement (UI local)
+      const mapped: Movement[] = cloudMovements.map((m) => ({
+        id: m.id,
+        bottleId: m.productId,
+        bottleName: m.productName,
+        type:
+          m.type === "sale"
+            ? "sales_import"
+            : m.type === "return"
+              ? "return"
+              : "edit",
+        oldValue: m.oldValue,
+        newValue: m.newValue,
+        timestamp: m.timestamp,
+        userName: m.userName,
+      }));
+      setMovements(mapped);
       return;
     }
     const all = movementsService.getAll();
     setMovements(all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
     notificationsService.markAsRead();
-  }, [isCloud, storeId]);
+  }, [isCloud, storeId, cloudMovements]);
 
   useEffect(() => {
     const update = () => {

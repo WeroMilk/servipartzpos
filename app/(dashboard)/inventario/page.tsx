@@ -4,75 +4,22 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import BottleDisplay from "@/components/Inventory/BottleDisplay";
 import BottleThumbnail from "@/components/Inventory/BottleThumbnail";
 import { categories } from "@/lib/bottlesData";
-import { loadInventory, saveInventory } from "@/lib/inventoryStorage";
 import { getLastInventoryComplete, setLastInventoryComplete, LAST_INVENTORY_COMPLETE_EVENT } from "@/lib/lastInventoryComplete";
 import { Bottle } from "@/lib/types";
 import { movementsService, notificationsService } from "@/lib/movements";
 import { demoAuth } from "@/lib/demoAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { useFirebase } from "@/lib/firebase";
 import { storeStore } from "@/lib/storeStore";
-import { getStoreProducts, updateProductStock, addMovement as addMovementFirestore } from "@/lib/firestore";
+import { updateProductStock, addMovement as addMovementFirestore } from "@/lib/firestore";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
+import { useInventory } from "@/lib/hooks/useInventory";
 
 type SortOption = "name-asc" | "quantity-desc" | "quantity-asc" | "custom";
 
 export default function InventarioPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
-  const isCloud = !!storeId && storeId !== "default" && useFirebase;
-
-  const [bottles, setBottles] = useState<Bottle[]>(() =>
-    typeof window !== "undefined" ? (isCloud ? [] : loadInventory()) : []
-  );
-  useEffect(() => {
-    if (isCloud && storeId) {
-      getStoreProducts(storeId)
-        .then((prods) => {
-          const mapped: Bottle[] = prods.map((p) => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            size: 0,
-            currentOz: 0,
-            currentUnits: p.stock,
-            price: p.price ?? 0,
-            image: p.image,
-          }));
-          setBottles(mapped);
-        })
-        .catch(() => setBottles([]));
-      return;
-    }
-    setBottles(loadInventory());
-  }, [isCloud, storeId]);
-
-  // Re-sincronizar con inventario al volver a esta pantalla (p. ej. tras editar inventario)
-  useEffect(() => {
-    const sync = () => {
-      if (isCloud && storeId) {
-        getStoreProducts(storeId)
-          .then((prods) => {
-            const mapped: Bottle[] = prods.map((p) => ({
-              id: p.id,
-              name: p.name,
-              category: p.category,
-              size: 0,
-              currentOz: 0,
-              currentUnits: p.stock,
-              price: p.price ?? 0,
-              image: p.image,
-            }));
-            setBottles(mapped);
-          })
-          .catch(() => setBottles([]));
-        return;
-      }
-      setBottles(loadInventory());
-    };
-    window.addEventListener("focus", sync);
-    return () => window.removeEventListener("focus", sync);
-  }, [isCloud, storeId]);
+  const { bottles, loading } = useInventory(storeId);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
@@ -269,9 +216,8 @@ export default function InventarioPage() {
   };
 
   const handleBottleUpdate = useCallback((updatedBottle: Bottle) => {
-    setBottles((prev) => prev.map((b) => (b.id === updatedBottle.id ? updatedBottle : b)));
     setDisplayBottles((prev) => prev.map((b) => (b.id === updatedBottle.id ? updatedBottle : b)));
-    if (isCloud && storeId) {
+    if (storeId) {
       const useUnits = isMeasuredInUnits(updatedBottle.category);
       const newStock = useUnits
         ? Math.max(0, Math.round(updatedBottle.currentUnits ?? 0))
@@ -291,15 +237,16 @@ export default function InventarioPage() {
       }).catch(() => {
         /* ignore */
       });
-      return;
     }
-    // Modo local (legacy)
-    setBottles((prevAll) => {
-      const next = prevAll.map((b) => (b.id === updatedBottle.id ? updatedBottle : b));
-      saveInventory(next);
-      return next;
-    });
-  }, [isCloud, storeId]);
+  }, [storeId]);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <span className="text-apple-text2 text-sm">Cargando inventario…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

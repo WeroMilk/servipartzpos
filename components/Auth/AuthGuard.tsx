@@ -3,58 +3,15 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, useFirebase } from "@/lib/firebase";
-import { getUserProfile, setUserProfile } from "@/lib/firestore";
 import { demoAuth } from "@/lib/demoAuth";
 import { useRouter } from "next/navigation";
 import BottleSpinner from "@/components/Loading/BottleSpinner";
-import { storeStore } from "@/lib/storeStore";
-
-async function loadFirebaseUserAndProfile(): Promise<boolean> {
-  if (!auth?.currentUser) return false;
-  const user = auth.currentUser;
-  const fallbackProfile = {
-    email: user.email ?? "",
-    name: user.displayName ?? user.email?.split("@")[0],
-    role: "store_user" as const,
-    storeIds: ["default"] as string[],
-    currentStoreId: "default" as string,
-    currentStoreName: "Matriz" as string,
-  };
-  try {
-    let profile = await getUserProfile(user.uid);
-    if (!profile) {
-      profile = { ...fallbackProfile };
-      try {
-        await setUserProfile(user.uid, profile);
-      } catch {
-        // Firestore falló al crear; usar perfil en memoria
-      }
-    }
-    demoAuth.setFirebaseProfile(profile);
-    // Sincronizar tienda actual (misma en todos los dispositivos)
-    if (profile.currentStoreId) {
-      storeStore.setStore(profile.currentStoreId, profile.currentStoreName);
-    } else {
-      // Si no existe aún, inicializar en Firestore con default
-      try {
-        await setUserProfile(user.uid, { currentStoreId: "default", currentStoreName: "Matriz" });
-      } catch {
-        /* ignore */
-      }
-      storeStore.setStore("default", "Matriz");
-    }
-    return true;
-  } catch (e) {
-    console.error("Error cargando perfil de Firestore, usando fallback:", e);
-    demoAuth.setFirebaseProfile(fallbackProfile);
-    storeStore.setStore(fallbackProfile.currentStoreId, fallbackProfile.currentStoreName);
-    return true;
-  }
-}
+import { useUserProfile } from "@/lib/hooks/useUserProfile";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { loading: profileLoading } = useUserProfile();
 
   useEffect(() => {
     if (useFirebase && auth) {
@@ -66,12 +23,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           if (!mounted) return;
           if (!auth.currentUser) {
             demoAuth.clearFirebaseProfile();
-            router.push("/");
-            return;
-          }
-          const ok = await loadFirebaseUserAndProfile();
-          if (!mounted) return;
-          if (!ok) {
             router.push("/");
             return;
           }
@@ -91,8 +42,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           router.push("/");
           return;
         }
-        const ok = await loadFirebaseUserAndProfile();
-        if (mounted && ok) setLoading(false);
+        if (mounted) setLoading(false);
       });
       return () => {
         mounted = false;
@@ -121,7 +71,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-apple-bg">
         <BottleSpinner />
