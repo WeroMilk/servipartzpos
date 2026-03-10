@@ -506,6 +506,7 @@ export default function CajaPage() {
                       <button
                         type="button"
                         onClick={() => updateCartQty(c.id, -1)}
+                        aria-label="Reducir cantidad"
                         className="p-1 rounded bg-slate-200 hover:bg-slate-300"
                       >
                         <Minus className="w-3 h-3" />
@@ -514,6 +515,7 @@ export default function CajaPage() {
                       <button
                         type="button"
                         onClick={() => updateCartQty(c.id, 1)}
+                        aria-label="Aumentar cantidad"
                         className="p-1 rounded bg-slate-200 hover:bg-slate-300"
                       >
                         <Plus className="w-3 h-3" />
@@ -521,6 +523,7 @@ export default function CajaPage() {
                       <button
                         type="button"
                         onClick={() => removeFromCart(c.id)}
+                        aria-label="Eliminar producto del carrito"
                         className="p-1 rounded text-red-600 hover:bg-red-50"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -537,7 +540,6 @@ export default function CajaPage() {
                 <p className="text-xs font-medium text-slate-600 flex items-center gap-1"
                   >Descuento {!discountUnlocked && <Lock className="w-3 h-3 text-slate-400" />}</p>
                 <div
-                  role="button"
                   tabIndex={0}
                   onClick={(e) => {
                     if (discountUnlocked) return;
@@ -550,6 +552,7 @@ export default function CajaPage() {
                       handleDiscountSectionClick();
                     }
                   }}
+                  aria-label="Sección de descuento"
                   className={`flex gap-2 rounded-lg ${!discountUnlocked ? "cursor-pointer bg-slate-50 border border-dashed border-slate-200 p-2" : ""}`}
                 >
                   <div className="flex-1 relative">

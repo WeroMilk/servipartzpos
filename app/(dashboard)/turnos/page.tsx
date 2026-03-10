@@ -195,6 +195,7 @@ export default function TurnosPage() {
                     Cajero
                   </label>
                   <select
+                    aria-label="Seleccionar cajero"
                     value={effectiveEmployeeId}
                     onChange={(e) => setSelectedEmployeeId(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500"
