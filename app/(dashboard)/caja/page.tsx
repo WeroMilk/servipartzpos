@@ -353,7 +353,7 @@ export default function CajaPage() {
       alert("Error al registrar la venta");
     } finally {
       setProcessing(false);
-      refreshData();
+      // El inventario se actualiza automáticamente via useInventory hook
     }
   };
 

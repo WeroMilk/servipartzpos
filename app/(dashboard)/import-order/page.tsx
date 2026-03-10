@@ -49,19 +49,41 @@ export default function ImportOrderPage() {
     setDetailRows([]);
 
     try {
-      const XLSX = await import("xlsx");
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.default.Workbook();
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "array" });
-      const firstSheetName = workbook.SheetNames[0];
-      if (!firstSheetName) {
+      await workbook.xlsx.load(data);
+      
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
         const msg = "El archivo no tiene hojas.";
         setStatus("error");
         setMessage(msg);
         toast.show({ title: "Error", message: msg, type: "error" });
         return;
       }
-      const sheet = workbook.Sheets[firstSheetName];
-      const json: { [key: string]: unknown }[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      // Leer header y convertir a JSON
+      const headerRow = worksheet.getRow(1);
+      const headers: string[] = [];
+      headerRow?.eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = String(cell.value ?? "").trim().toLowerCase();
+      });
+
+      const json: { [key: string]: unknown }[] = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Skip header
+        const obj: { [key: string]: unknown } = {};
+        row.eachCell((cell, colNumber) => {
+          const header = headers[colNumber - 1];
+          if (header) {
+            obj[header] = cell.value ?? "";
+          }
+        });
+        if (Object.keys(obj).length > 0) {
+          json.push(obj);
+        }
+      });
 
       const orderRows = sheetToOrderRows(json);
       if (orderRows.length === 0) {
