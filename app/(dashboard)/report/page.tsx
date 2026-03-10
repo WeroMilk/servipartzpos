@@ -19,7 +19,7 @@ import { storeStore } from "@/lib/storeStore";
 import { getCurrentShift } from "@/lib/shiftService";
 import { CalendarPicker } from "@/components/Report/CalendarPicker";
 import { useFirebase } from "@/lib/firebase";
-import { getStoreSales } from "@/lib/firestore";
+import { useSalesByStore } from "@/lib/hooks/useSales";
 import type { Sale } from "@/lib/types";
 
 function toDateString(d: Date): string {
@@ -51,6 +51,9 @@ export default function ReportPage() {
   const shiftStats = currentShift ? getSalesStatsForShift(currentShift.id) : null;
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
+  // Hook para escuchar ventas en tiempo real
+  const { sales, loading: salesLoading } = useSalesByStore(isCloud ? storeId : null);
+
   const today = new Date();
   today.setHours(23, 59, 59, 999);
 
@@ -58,11 +61,10 @@ export default function ReportPage() {
   const [period, setPeriod] = useState<ReportPeriod>("day");
   const [refDate, setRefDate] = useState<Date>(() => new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [cloudSales, setCloudSales] = useState<Sale[] | null>(null);
 
   const periodStats = getSalesStatsForPeriod(period, refDate);
 
-  const computeCloudPeriodStats = (sales: Sale[], p: ReportPeriod, ref: Date) => {
+  const computeCloudPeriodStats = (salesList: Sale[], p: ReportPeriod, ref: Date) => {
     const start = new Date(ref);
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
@@ -77,7 +79,7 @@ export default function ReportPage() {
       end.setHours(23, 59, 59, 999);
     }
 
-    const filtered = sales.filter((s) => s.timestamp >= start && s.timestamp <= end);
+    const filtered = salesList.filter((s) => s.timestamp >= start && s.timestamp <= end);
     const totalRevenue = filtered.reduce((acc, s) => acc + (s.total ?? 0), 0);
     let total = 0;
     const byProduct: Record<string, { quantity: number; revenue: number }> = {};
@@ -112,17 +114,10 @@ export default function ReportPage() {
     setStats(getSalesStats());
   }, []);
 
-  useEffect(() => {
-    if (!isCloud || !storeId) return;
-    getStoreSales(storeId, 365)
-      .then((s) => setCloudSales(s))
-      .catch(() => setCloudSales([]));
-  }, [isCloud, storeId]);
-
   const handleDownload = () => {
-    const effectiveForDownload = isCloud && cloudSales
+    const effectiveForDownload = isCloud && !salesLoading && sales.length > 0
       ? (() => {
-          const s = computeCloudPeriodStats(cloudSales, period, refDate);
+          const s = computeCloudPeriodStats(sales, period, refDate);
           return {
             total: s.total,
             totalRevenue: s.totalRevenue,
@@ -245,7 +240,7 @@ export default function ReportPage() {
     );
   }
 
-  if ((isCloud && cloudSales === null) || (!isCloud && !stats)) {
+  if ((isCloud && salesLoading) || (!isCloud && !stats)) {
     return (
       <div className="h-full flex items-center justify-center">
         <span className="text-apple-text2 text-sm">Cargando…</span>
@@ -253,8 +248,8 @@ export default function ReportPage() {
     );
   }
 
-  const effectivePeriodStats = isCloud && cloudSales
-    ? computeCloudPeriodStats(cloudSales, period, refDate)
+  const effectivePeriodStats = isCloud && !salesLoading && sales.length > 0
+    ? computeCloudPeriodStats(sales, period, refDate)
     : periodStats;
 
   return (
@@ -274,8 +269,8 @@ export default function ReportPage() {
             const isActive = period === p;
             const refForLabel = p === "month" ? new Date(refDate.getFullYear(), refDate.getMonth(), 1) : refDate;
             const label = formatPeriodLabelShort(p, refForLabel);
-            const statsForBox = isCloud && cloudSales
-              ? computeCloudPeriodStats(cloudSales, p, refForLabel)
+            const statsForBox = isCloud && !salesLoading && sales.length > 0
+              ? computeCloudPeriodStats(sales, p, refForLabel)
               : getSalesStatsForPeriod(p, refForLabel);
             const revenue = (statsForBox as any).totalRevenue;
             return (

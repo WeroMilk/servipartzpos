@@ -20,7 +20,8 @@ import { employeeAuth } from "@/lib/employeeAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
 import { getProductImageUrl } from "@/lib/productImages";
 import { useFirebase } from "@/lib/firebase";
-import { getStoreProducts, updateProductStock, addMovement as addMovementFirestore, addSaleRecordFirestore, getCurrentShiftFirestore } from "@/lib/firestore";
+import { useInventory } from "@/lib/hooks/useInventory";
+import { updateProductStock, addMovement as addMovementFirestore, addSaleRecordFirestore, getCurrentShiftFirestore } from "@/lib/firestore";
 import PaymentModal from "@/components/Caja/PaymentModal";
 import TicketPreview from "@/components/Caja/TicketPreview";
 import type { Bottle, PaymentMethod } from "@/lib/types";
@@ -37,6 +38,11 @@ interface CartItem {
 
 export default function CajaPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const isCloud = !!storeId && storeId !== "default" && useFirebase;
+
+  // Hook para inventario en tiempo real
+  const { bottles: cloudBottles, loading: inventoryLoading } = useInventory(isCloud ? storeId : null);
+
   const [bottles, setBottles] = useState<Bottle[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -51,8 +57,6 @@ export default function CajaPage() {
   const [discountPassword, setDiscountPassword] = useState("");
   const [discountPasswordError, setDiscountPasswordError] = useState("");
   const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
-
-  const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
   const checkShift = useCallback(() => {
     const sid = storeId ?? "default";
@@ -77,53 +81,35 @@ export default function CajaPage() {
     checkShift();
   }, [checkShift]);
 
+  // Sincronizar con el hook de inventario en tiempo real
+  useEffect(() => {
+    if (isCloud) {
+      setBottles(cloudBottles);
+    } else {
+      setBottles(loadInventoryFromStorage());
+    }
+  }, [isCloud, cloudBottles, inventoryLoading]);
+
   useEffect(() => {
     const onFocus = () => checkShift();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [checkShift]);
 
-  const refreshData = useCallback(() => {
-    const sid = storeId ?? "default";
-    if (isCloud) {
-      getStoreProducts(sid)
-        .then((prods) => {
-          // Adaptar Product -> Bottle para reutilizar UI existente
-          const mapped: Bottle[] = prods.map((p) => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            size: 0,
-            currentOz: 0,
-            currentUnits: p.stock,
-            price: p.price ?? 0,
-            image: p.image,
-          }));
-          setBottles(mapped);
-        })
-        .catch(() => {
-          setBottles([]);
-        });
-      return;
-    }
-    setBottles(loadInventoryFromStorage());
-  }, [isCloud, storeId]);
-
-  useEffect(() => {
-    refreshData();
-  }, [refreshData]);
-
   useEffect(() => {
     const syncPending = () => {
       if (isCloud) return;
       processQueue().then((n) => {
-        if (n > 0) refreshData();
+        if (n > 0) {
+          // Recargar inventario local
+          setBottles(loadInventoryFromStorage());
+        }
       });
     };
     if (navigator.onLine) syncPending();
     window.addEventListener("online", syncPending);
     return () => window.removeEventListener("online", syncPending);
-  }, [refreshData, isCloud]);
+  }, [isCloud]);
 
   const items = bottles.map((b) => {
     const useUnits = isMeasuredInUnits(b.category);

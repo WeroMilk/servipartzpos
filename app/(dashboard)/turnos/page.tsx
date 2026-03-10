@@ -16,11 +16,18 @@ import {
 import { calculateShiftSummary, calculateShiftSummaryFirestore } from "@/lib/cashCountService";
 import { ArqueoSummary, summaryToArqueoData } from "@/components/Turnos/ArqueoSummary";
 import { useFirebase } from "@/lib/firebase";
+import { useTurns } from "@/lib/hooks/useTurns";
 import { openShiftFirestore, getCurrentShiftFirestore, getShiftsForStoreFirestore, type ShiftRecord } from "@/lib/firestore";
 
 export default function TurnosPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const isCloud = !!storeId && storeId !== "default" && useFirebase;
+  
+  // Hook para escuchar turnos en tiempo real
+  const { currentShift: cloudCurrentShift, closedShifts: cloudClosedShifts, loading: turnsLoading } = useTurns(isCloud ? storeId : null);
+  
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [closedShifts, setClosedShifts] = useState<Shift[]>([]);
   const [initialCash, setInitialCash] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,22 +38,17 @@ export default function TurnosPage() {
   const [preCorteLoading, setPreCorteLoading] = useState(false);
   const [preCorteSummary, setPreCorteSummary] = useState<ReturnType<typeof calculateShiftSummary> | null>(null);
 
-  const isCloud = !!storeId && storeId !== "default" && useFirebase;
-
-  const refreshShift = () => {
-    if (!storeId) return;
-    if (isCloud) {
-      getCurrentShiftFirestore(storeId)
-        .then((s) => setCurrentShift((s as unknown as Shift) ?? null))
-        .catch(() => setCurrentShift(null));
-      return;
-    }
-    setCurrentShift(getCurrentShift(storeId));
-  };
-
+  // Sincronizar con el hook de tiempo real o con datos locales
   useEffect(() => {
-    refreshShift();
-  }, [storeId, isCloud]);
+    if (isCloud) {
+      setCurrentShift(cloudCurrentShift);
+      setClosedShifts(cloudClosedShifts);
+    } else {
+      if (!storeId) return;
+      setCurrentShift(getCurrentShift(storeId) ?? null);
+      setClosedShifts(getShiftsForStore(storeId, 200).filter((s) => s.status === "closed"));
+    }
+  }, [isCloud, cloudCurrentShift, cloudClosedShifts, storeId, turnsLoading]);
 
   useEffect(() => {
     const sid = storeId ?? "default";
@@ -102,7 +104,7 @@ export default function TurnosPage() {
         notificationsService.incrementUnread();
       }
       setInitialCash("");
-      refreshShift();
+      // El hook useTurns detectará el nuevo turno automáticamente
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al abrir turno");
     } finally {
@@ -357,7 +359,7 @@ export default function TurnosPage() {
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <h3 className="font-medium text-slate-700 text-sm mb-2">Historial reciente</h3>
-          <ShiftHistory storeId={storeId} />
+          <ShiftHistoryComponent shifts={closedShifts} />
         </div>
       </div>
     </div>
@@ -366,29 +368,8 @@ export default function TurnosPage() {
 
 const ITEMS_PER_PAGE = 5;
 
-function ShiftHistory({ storeId }: { storeId: string }) {
+function ShiftHistoryComponent({ shifts }: { shifts: Shift[] }) {
   const [page, setPage] = useState(0);
-  const [shifts, setShifts] = useState<Shift[]>([]);
-
-  useEffect(() => {
-    const isCloud = storeId !== "default" && useFirebase;
-    if (isCloud) {
-      getShiftsForStoreFirestore(storeId, 200)
-        .then((all) => {
-          const closed = all.filter((s) => s.status === "closed");
-          setShifts(closed as unknown as Shift[]);
-          setPage(0);
-        })
-        .catch(() => {
-          setShifts([]);
-          setPage(0);
-        });
-      return;
-    }
-    const all = getShiftsForStore(storeId, 200).filter((s) => s.status === "closed");
-    setShifts(all);
-    setPage(0);
-  }, [storeId]);
 
   const totalPages = Math.max(1, Math.ceil(shifts.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages - 1);
