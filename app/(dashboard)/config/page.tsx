@@ -1,17 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { employeeAuth } from "@/lib/employeeAuth";
-import type { Employee } from "@/lib/employeeAuth";
-import { movementsService, notificationsService } from "@/lib/movements";
 import { auth } from "@/lib/auth";
-import { getStores } from "@/lib/firestore";
-import type { Store as StoreType } from "@/lib/types";
 import { loadInventory } from "@/lib/inventoryStorage";
 import { buildOrderReport } from "@/lib/orderReport";
 import { exportInventory, exportSales, exportMovements, exportAll } from "@/lib/exportService";
-import { Lock, Package, ShoppingCart, Download, MessageCircle, Check, Loader2, Store, Database, FileJson, FileText, ArrowRight, Users } from "lucide-react";
+import { Package, ShoppingCart, Download, MessageCircle, Store, Database, FileJson, FileText, ArrowRight, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const WHATSAPP_RECIPIENTS = [
@@ -24,36 +19,10 @@ function extractPhone(value: string): string {
 }
 
 export default function ConfigPage() {
-  const [employees, setEmployees] = useState<Employee[]>(() => employeeAuth.getEmployees());
-  const [showPassword, setShowPassword] = useState(false);
-  const [editingPassword, setEditingPassword] = useState<Record<string, string>>({});
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [savingEmployeeId, setSavingEmployeeId] = useState<string | null>(null);
-  const [savedEmployeeId, setSavedEmployeeId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setEmployees(employeeAuth.getEmployees());
-  }, []);
-
-  const [registeredUsers, setRegisteredUsers] = useState<{ email: string; name?: string; role: string; storeIds?: string[] }[]>([]);
-  const [allStores, setAllStores] = useState<StoreType[]>([]);
   const [orderReportText, setOrderReportText] = useState("");
   const [orderRecipient, setOrderRecipient] = useState(WHATSAPP_RECIPIENTS[0]?.value ?? "");
   const [exporting, setExporting] = useState<string | null>(null);
-  const [userStoreAssignments, setUserStoreAssignments] = useState<Record<string, string[]>>({});
-
-  useEffect(() => {
-    if (!auth.isAdminUser()) return;
-    auth.getRegisteredUsersForAdmin().then((list) => {
-      setRegisteredUsers(list);
-      const init: Record<string, string[]> = {};
-      list.forEach((u) => {
-        init[u.email] = u.storeIds ?? [];
-      });
-      setUserStoreAssignments(init);
-    });
-    getStores().then(setAllStores);
-  }, []);
 
   const handleGenerateOrder = () => {
     const bottles = loadInventory();
@@ -100,79 +69,6 @@ export default function ConfigPage() {
     setShowOrderModal(false);
   };
 
-  const handlePasswordChange = (emp: Employee, newPassword: string): boolean => {
-    const trimmed = newPassword.trim();
-    if (!trimmed) {
-      alert("La contraseña no puede estar vacía.");
-      return false;
-    }
-    const previousPassword = emp.password;
-    if (trimmed === previousPassword) {
-      setEditingPassword((prev) => {
-        const next = { ...prev };
-        delete next[emp.id];
-        return next;
-      });
-      return false;
-    }
-    employeeAuth.setEmployeePassword(emp.id, trimmed);
-    setEmployees(employeeAuth.getEmployees());
-    setEditingPassword((prev) => {
-      const next = { ...prev };
-      delete next[emp.id];
-      return next;
-    });
-    movementsService.add({
-      type: "employee_password_change",
-      bottleId: "_",
-      bottleName: "Configuración",
-      newValue: 0,
-      userName: auth.getCurrentUser()?.name ?? "Usuario",
-      description: `Contraseña de «${emp.label}» actualizada`,
-    });
-    notificationsService.incrementUnread();
-    return true;
-  };
-
-  const handleStoreAssignmentChange = (email: string, storeId: string, checked: boolean) => {
-    setUserStoreAssignments((prev) => {
-      const current = prev[email] ?? [];
-      let next: string[];
-      if (checked) {
-        next = current.includes(storeId) ? current : [...current, storeId];
-      } else {
-        next = current.filter((id) => id !== storeId);
-      }
-      return { ...prev, [email]: next };
-    });
-  };
-
-  const handleSaveStoreAssignment = async (email: string) => {
-    const storeIds = userStoreAssignments[email] ?? [];
-    await auth.updateUserStoreIds(email, storeIds);
-    movementsService.add({
-      type: "store_name_change",
-      bottleId: "_",
-      bottleName: "Configuración",
-      newValue: 0,
-      userName: auth.getCurrentUser()?.name ?? "Usuario",
-      description: `Tiendas asignadas a ${email} actualizadas`,
-    });
-  };
-
-  const onSavePassword = (emp: Employee) => {
-    const newPassword = editingPassword[emp.id] ?? emp.password;
-    setSavingEmployeeId(emp.id);
-    setTimeout(() => {
-      const didSave = handlePasswordChange(emp, newPassword);
-      setSavingEmployeeId(null);
-      if (didSave) {
-        setSavedEmployeeId(emp.id);
-        setTimeout(() => setSavedEmployeeId(null), 1800);
-      }
-    }, 280);
-  };
-
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-apple-bg">
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col items-stretch px-2 sm:px-4 lg:px-6 py-2 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] sm:pb-3 overflow-touch" style={{ WebkitOverflowScrolling: "touch" }}>
@@ -203,115 +99,22 @@ export default function ConfigPage() {
               <ArrowRight className="w-5 h-5 text-apple-text2 shrink-0" />
             </Link>
           </div>
-          {/* Contraseña de empleado */}
-          <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
-            <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
-                <Lock className="w-4 h-4 text-apple-accent" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm sm:text-base font-semibold text-apple-text">Contraseña de empleado</h2>
-                <p className="text-xs sm:text-sm text-apple-text2 break-words">Edita contraseñas; se registra en Movimientos.</p>
-              </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-x-hidden p-2 sm:p-4 space-y-2">
-              {employees.map((emp) => (
-                <div key={emp.id} className="flex flex-row items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-apple-border bg-apple-bg/50 p-2 sm:p-3">
-                  <label htmlFor={`employee-password-${emp.id}`} className="shrink-0 w-16 sm:w-20 text-xs sm:text-sm font-medium text-apple-text">{emp.label}</label>
-                  <input
-                    id={`employee-password-${emp.id}`}
-                    name={`employee-password-${emp.id}`}
-                    type={showPassword ? "text" : "password"}
-                    value={editingPassword[emp.id] ?? emp.password}
-                    onChange={(e) =>
-                      setEditingPassword((prev) => ({ ...prev, [emp.id]: e.target.value }))
-                    }
-                    placeholder="Contraseña"
-                    className="flex-1 min-w-0 px-3 py-2 text-sm font-mono bg-apple-surface border border-apple-border rounded-lg focus:outline-none focus:ring-2 focus:ring-apple-accent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => onSavePassword(emp)}
-                    disabled={savingEmployeeId !== null}
-                    className="shrink-0 px-3 py-2 bg-apple-accent text-white text-xs sm:text-sm font-medium rounded-lg hover:opacity-90 inline-flex items-center justify-center gap-1 disabled:opacity-70"
-                  >
-                    {savingEmployeeId === emp.id ? (
-                      <Loader2 className="w-3 h-3 animate-spin" aria-hidden />
-                    ) : savedEmployeeId === emp.id ? (
-                      <Check className="w-3 h-3" aria-hidden />
-                    ) : (
-                      "Guardar"
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex-shrink-0 p-2 sm:p-4 pt-0">
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="w-full px-3 py-2.5 text-sm font-medium rounded-lg border border-apple-border text-apple-text bg-apple-surface hover:bg-apple-bg"
-              >
-                {showPassword ? "Ocultar contraseñas" : "Ver contraseñas"}
-              </button>
-            </div>
-          </section>
 
-          {/* Asignación de tiendas por vendedor - solo admin */}
-          {auth.isAdminUser() && registeredUsers.length > 0 && (
-            <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
-              <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
-                  <Users className="w-4 h-4 text-apple-accent" aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm sm:text-base font-semibold text-apple-text">Tiendas por vendedor</h2>
-                  <p className="text-xs sm:text-sm text-apple-text2 break-words">Asigna a cada vendedor la tienda o tiendas donde puede trabajar.</p>
-                </div>
+          {/* Usuarios y tiendas (solo admin) */}
+          {auth.isAdminUser() && (
+            <Link
+              href="/users"
+              className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-apple-border bg-apple-surface hover:bg-apple-bg transition-colors"
+            >
+              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
+                <Users className="w-4 h-4 text-apple-accent" aria-hidden />
               </div>
-              <div className="flex-1 min-h-0 overflow-x-hidden p-2 sm:p-4 space-y-4">
-                {registeredUsers.map((user) => (
-                  <div key={user.email} className="rounded-lg sm:rounded-xl border border-apple-border bg-apple-bg/50 p-3 sm:p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <div>
-                        <p className="font-medium text-apple-text text-sm">{user.name ?? user.email}</p>
-                        <p className="text-xs text-apple-text2">{user.email}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveStoreAssignment(user.email)}
-                        className="shrink-0 px-3 py-2 bg-apple-accent text-white text-xs font-medium rounded-lg hover:opacity-90"
-                      >
-                        Guardar
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {allStores.map((store) => {
-                        const assigned = (userStoreAssignments[user.email] ?? user.storeIds ?? []).includes(store.id);
-                        return (
-                          <label
-                            key={store.id}
-                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${
-                              assigned
-                                ? "border-apple-accent bg-apple-accent/10 text-apple-accent"
-                                : "border-apple-border bg-apple-surface text-apple-text2 hover:bg-apple-bg"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={assigned}
-                              onChange={(e) => handleStoreAssignmentChange(user.email, store.id, e.target.checked)}
-                              className="sr-only"
-                            />
-                            <span>{store.name}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              <div className="flex-1 min-w-0 text-left">
+                <p className="font-medium text-apple-text text-sm sm:text-base">Usuarios y tiendas</p>
+                <p className="text-xs sm:text-sm text-apple-text2">Contraseñas de empleado y tiendas por vendedor.</p>
               </div>
-            </section>
+              <ArrowRight className="w-5 h-5 text-apple-text2 shrink-0" />
+            </Link>
           )}
 
           {/* Generar pedido + Mi inventario */}

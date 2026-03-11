@@ -27,7 +27,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   // Solo redirigir cuando el perfil ya cargó y sigue sin haber tienda (evita desaparecer datos tras refresh)
   useEffect(() => {
     if (!profileLoaded) return;
-    const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname === "/report" || pathname === "/inventario" || pathname?.startsWith("/admin");
+    const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname === "/report" || pathname === "/inventario" || pathname === "/users" || pathname?.startsWith("/admin");
     if (auth.isLimitedUser() && !storeId) {
       const user = auth.getCurrentUser();
       const storeIds = user?.storeIds ?? [];
@@ -52,6 +52,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     "/cfdi",
     "/admin",
     "/stores",
+    "/users",
     "/select-bottles",
   ];
   useEffect(() => {

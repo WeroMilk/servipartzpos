@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3, Store, Wifi, WifiOff, Clock, RotateCcw } from "lucide-react";
+import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3, Store, Users, Wifi, WifiOff, Clock, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LogoutButton from "@/components/Auth/LogoutButton";
 import { auth } from "@/lib/auth";
@@ -31,6 +31,7 @@ const LIMITED_NAV_HREFS = new Set(["/caja", "/inventario", "/turnos", "/devoluci
 
 const ADMIN_NAV = { href: "/admin", icon: BarChart3, label: "Panel gerente" };
 const STORES_NAV = { href: "/stores", icon: Store, label: "Gestión de tiendas" };
+const USERS_NAV = { href: "/users", icon: Users, label: "Usuarios y tiendas" };
 
 export default function DashboardHeader({ leftContent, notificationsCount = 0 }: DashboardHeaderProps) {
   const pathname = usePathname();
@@ -113,6 +114,14 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                   aria-label={ADMIN_NAV.label}
                 >
                   <ADMIN_NAV.icon className="w-4 h-4 flex-shrink-0" />
+                </Link>
+                <Link
+                  href={USERS_NAV.href}
+                  className={`touch-target-min flex items-center justify-center min-w-[36px] min-h-[36px] p-1.5 rounded-lg transition-colors ${linkClass(USERS_NAV.href)}`}
+                  title={USERS_NAV.label}
+                  aria-label={USERS_NAV.label}
+                >
+                  <USERS_NAV.icon className="w-4 h-4 flex-shrink-0" />
                 </Link>
               </>
             )}
@@ -233,6 +242,20 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                             <ADMIN_NAV.icon className="w-5 h-5" strokeWidth={2} />
                           </span>
                           <span className="font-medium text-[15px]">{ADMIN_NAV.label}</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={USERS_NAV.href}
+                          onClick={() => setMenuOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                            pathname === USERS_NAV.href ? "bg-primary-600/20 text-primary-400" : "text-slate-300 hover:bg-white/10"
+                          }`}
+                        >
+                          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/5">
+                            <USERS_NAV.icon className="w-5 h-5" strokeWidth={2} />
+                          </span>
+                          <span className="font-medium text-[15px]">{USERS_NAV.label}</span>
                         </Link>
                       </li>
                     </>

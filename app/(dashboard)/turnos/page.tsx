@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X, ClipboardCheck } from "lucide-react";
 import { useStore } from "@/lib/StoreContext";
@@ -37,11 +37,18 @@ export default function TurnosPage() {
   const [showPreCorteModal, setShowPreCorteModal] = useState(false);
   const [preCorteLoading, setPreCorteLoading] = useState(false);
   const [preCorteSummary, setPreCorteSummary] = useState<ReturnType<typeof calculateShiftSummary> | null>(null);
+  const lastOpenedShiftIdRef = useRef<string | null>(null);
 
-  // Sincronizar con el hook de tiempo real o con datos locales
+  // Sincronizar con el hook de tiempo real o con datos locales.
+  // En nube: no poner null si acabamos de abrir turno (optimista) hasta que llegue el dato.
   useEffect(() => {
     if (isCloud) {
-      setCurrentShift(cloudCurrentShift);
+      if (cloudCurrentShift) {
+        lastOpenedShiftIdRef.current = null;
+        setCurrentShift(cloudCurrentShift);
+      } else if (!turnsLoading) {
+        if (!lastOpenedShiftIdRef.current) setCurrentShift(null);
+      }
       setClosedShifts(cloudClosedShifts);
     } else {
       if (!storeId) return;
@@ -91,7 +98,7 @@ export default function TurnosPage() {
     try {
       if (isCloud) {
         const newShiftId = await openShiftFirestore(storeId, employeeId, employeeName, pendingAmount);
-        // Actualización optimista: mostrar turno abierto de inmediato sin esperar el listener
+        lastOpenedShiftIdRef.current = newShiftId;
         const optimisticShift: Shift = {
           id: newShiftId,
           storeId,
