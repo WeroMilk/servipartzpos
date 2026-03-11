@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { loadInventory } from "@/lib/inventoryStorage";
 import { buildOrderReport } from "@/lib/orderReport";
 import { exportInventory, exportSales, exportMovements, exportAll } from "@/lib/exportService";
-import { Package, ShoppingCart, Download, MessageCircle, Store, Database, FileJson, FileText, ArrowRight, Users } from "lucide-react";
+import { Package, ShoppingCart, Download, MessageCircle, Store, Database, FileJson, FileText, ArrowRight, Users, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const WHATSAPP_RECIPIENTS = [
