@@ -14,7 +14,7 @@ import {
   type SalesStats,
   type ReportPeriod,
 } from "@/lib/salesReport";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { storeStore } from "@/lib/storeStore";
 import { getCurrentShift } from "@/lib/shiftService";
 import { CalendarPicker } from "@/components/Report/CalendarPicker";
@@ -45,7 +45,7 @@ function formatPeriodLabelShort(period: ReportPeriod, refDate: Date): string {
 }
 
 export default function ReportPage() {
-  const isLimited = demoAuth.isLimitedUser();
+  const isLimited = auth.isLimitedUser();
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
   const currentShift = storeId ? getCurrentShift(storeId) : null;
   const shiftStats = currentShift ? getSalesStatsForShift(currentShift.id) : null;

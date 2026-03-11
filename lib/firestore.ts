@@ -467,6 +467,8 @@ export interface UserProfile {
   storeIds?: string[];
   currentStoreId?: string;
   currentStoreName?: string;
+  /** Nombre de tienda por defecto (para mostrar en encabezado cuando no hay tienda seleccionada). */
+  storeName?: string;
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
@@ -482,6 +484,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     storeIds: data?.storeIds || [],
     currentStoreId: data?.currentStoreId,
     currentStoreName: data?.currentStoreName,
+    storeName: data?.storeName,
   };
 }
 
@@ -497,4 +500,33 @@ export async function setUserProfile(
     data.createdAt = Timestamp.now();
   }
   await setDoc(ref, data, { merge: true });
+}
+
+/** Lista todos los perfiles de usuario (solo permitido para admin por reglas). */
+export async function listUserProfiles(): Promise<(UserProfile & { id: string })[]> {
+  if (!db || !useFirebase) return [];
+  const snap = await getDocs(collection(db, "users"));
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      email: data?.email ?? "",
+      name: data?.name,
+      role: (data?.role as "admin" | "store_user") || "store_user",
+      storeIds: data?.storeIds ?? [],
+      currentStoreId: data?.currentStoreId,
+      currentStoreName: data?.currentStoreName,
+      storeName: data?.storeName,
+    };
+  });
+}
+
+/** Actualiza las tiendas asignadas a un usuario buscando por email. */
+export async function updateUserStoreIdsByEmail(email: string, storeIds: string[]): Promise<void> {
+  if (!db || !useFirebase) return;
+  const q = query(collection(db, "users"), where("email", "==", email));
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+  const ref = snap.docs[0].ref;
+  await updateDoc(ref, { storeIds });
 }

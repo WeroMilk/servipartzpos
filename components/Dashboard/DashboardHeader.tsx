@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart, BarChart3, Store, Wifi, WifiOff, Clock, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LogoutButton from "@/components/Auth/LogoutButton";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { storeStore } from "@/lib/storeStore";
 
 interface DashboardHeaderProps {
@@ -26,8 +26,8 @@ const NAV_ITEMS = [
   { href: "/config", icon: Settings, label: "Configuraciones" },
 ] as const;
 
-/** Solo Punto de venta, Turnos y Devoluciones para vendedor (Gabriel). Sin inventario. */
-const LIMITED_NAV_HREFS = new Set(["/caja", "/turnos", "/devoluciones"]);
+/** Vendedor (Gabriel): Punto de venta, Inventario, Turnos y Devoluciones (estas con contraseña gerente). */
+const LIMITED_NAV_HREFS = new Set(["/caja", "/inventario", "/turnos", "/devoluciones"]);
 
 const ADMIN_NAV = { href: "/admin", icon: BarChart3, label: "Panel gerente" };
 const STORES_NAV = { href: "/stores", icon: Store, label: "Gestión de tiendas" };
@@ -95,7 +95,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
               <POS_NAV.icon className="w-5 h-5 flex-shrink-0" />
               <span>{POS_NAV.label}</span>
             </Link>
-            {demoAuth.isAdminUser() && (
+            {auth.isAdminUser() && (
               <>
                 <Link
                   href={STORES_NAV.href}
@@ -115,7 +115,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                 </Link>
               </>
             )}
-            {(demoAuth.isLimitedUser() ? NAV_ITEMS.filter((i) => LIMITED_NAV_HREFS.has(i.href)) : NAV_ITEMS).map(({ href, icon: Icon, label }) => (
+            {(auth.isLimitedUser() ? NAV_ITEMS.filter((i) => LIMITED_NAV_HREFS.has(i.href)) : NAV_ITEMS).map(({ href, icon: Icon, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -204,7 +204,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                       <span className="font-semibold text-[16px]">{POS_NAV.label}</span>
                     </Link>
                   </li>
-                  {demoAuth.isAdminUser() && (
+                  {auth.isAdminUser() && (
                     <>
                       <li>
                         <Link
@@ -236,7 +236,7 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
                       </li>
                     </>
                   )}
-                  {(demoAuth.isLimitedUser() ? NAV_ITEMS.filter((i) => LIMITED_NAV_HREFS.has(i.href)) : NAV_ITEMS).map(({ href, icon: Icon, label }) => {
+                  {(auth.isLimitedUser() ? NAV_ITEMS.filter((i) => LIMITED_NAV_HREFS.has(i.href)) : NAV_ITEMS).map(({ href, icon: Icon, label }) => {
                     const isActive = pathname === href;
                     return (
                       <li key={href}>

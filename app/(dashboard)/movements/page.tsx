@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { movementsService, notificationsService, Movement } from "@/lib/movements";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { motion } from "framer-motion";
 import { Check, X, Edit, Settings, ChevronLeft, ChevronRight, Package, Type, Calendar, FileSpreadsheet, ArrowLeftRight, ClipboardCheck, Lock, RotateCcw, DollarSign } from "lucide-react";
 import { isBeerBottleId } from "@/lib/measurementRules";
@@ -158,7 +158,7 @@ export default function MovementsPage() {
             <h2 className="text-lg font-semibold text-apple-text">Movimientos</h2>
             <p className="text-xs text-apple-text2">Historial de cambios en el inventario</p>
           </div>
-          {movements.length > 0 && demoAuth.isAdminUser() && (
+          {movements.length > 0 && auth.isAdminUser() && (
             <button
               type="button"
               onClick={handleClearAll}

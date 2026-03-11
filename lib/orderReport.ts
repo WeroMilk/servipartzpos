@@ -1,5 +1,6 @@
 import { Bottle } from "./types";
 import { isMeasuredInUnits } from "./measurementRules";
+import { storeStore } from "./storeStore";
 
 const ML_TO_OZ = 0.033814;
 
@@ -38,15 +39,7 @@ export interface OrderReportLine {
 export function buildOrderReport(bottles: Bottle[]): { text: string; lines: OrderReportLine[] } {
   const lines: OrderReportLine[] = [];
   const storeName = typeof window !== "undefined"
-    ? (() => {
-        try {
-          const name = localStorage.getItem("pos_current_store_name");
-          if (name) return name;
-          const u = localStorage.getItem("demo_user");
-          if (u) return (JSON.parse(u) as { storeName?: string }).storeName ?? "SERVIPARTZ";
-        } catch {}
-        return "SERVIPARTZ";
-      })()
+    ? (storeStore.getStoreName() ?? "SERVIPARTZ")
     : "SERVIPARTZ";
 
   const porPedir: OrderReportLine[] = [];

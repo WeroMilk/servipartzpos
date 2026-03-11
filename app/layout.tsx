@@ -77,7 +77,7 @@ export default function RootLayout({
                   return (
                     cspEval ||
                     firebaseDeprec ||
-                    /React DevTools|Download the React DevTools|Fast Refresh|preload.*layout\\.css|Modo DEMO|pol[ií]tica de seguridad/i.test(s) ||
+                    /React DevTools|Download the React DevTools|Fast Refresh|preload.*layout\\.css|pol[ií]tica de seguridad/i.test(s) ||
                     /ERR_EMPTY_RESPONSE|Failed to load resource|net::|Load failed|ResizeObserver loop|ChunkLoadError|Loading chunk \\d+ failed|Dynamic server usage/i.test(s) ||
                     /Hydration|Text content does not match|Did not expect server HTML|Minified React error|Warning: .* did not match/i.test(s) ||
                     /\\[HMR\\]|Hot Module Replacement|react-refresh|webpack.*warn|Source map/i.test(s) ||

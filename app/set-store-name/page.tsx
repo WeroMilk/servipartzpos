@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/Auth/AuthGuard";
 import LogoutButton from "@/components/Auth/LogoutButton";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
+import { auth as firebaseAuth } from "@/lib/firebase";
+import { setUserProfile } from "@/lib/firestore";
 import { movementsService } from "@/lib/movements";
 
 export default function SetStoreNamePage() {
@@ -12,24 +14,28 @@ export default function SetStoreNamePage() {
   const router = useRouter();
 
   useEffect(() => {
-    const user = demoAuth.getCurrentUser();
+    const user = auth.getCurrentUser();
     if (user?.storeName) setStoreName(user.storeName);
   }, []);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const name = storeName.trim();
     if (!name) {
       alert("Por favor ingresa el nombre de tu tienda");
       return;
     }
-    const oldName = demoAuth.getCurrentUser()?.storeName ?? "";
-    demoAuth.updateStoreName(name);
+    const oldName = auth.getCurrentUser()?.storeName ?? "";
+    if (firebaseAuth.currentUser) {
+      await setUserProfile(firebaseAuth.currentUser.uid, { storeName: name });
+      const prev = auth.getCurrentUser();
+      if (prev) auth.setProfile({ ...prev, storeName: name });
+    }
     movementsService.add({
       type: "store_name_change",
       bottleId: "_",
       bottleName: "Nombre de tienda",
       newValue: 0,
-      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      userName: auth.getCurrentUser()?.name ?? "Usuario",
       description: oldName ? `«${oldName}» → «${name}»` : `Nombre de tienda: «${name}»`,
     });
     router.push("/select-bottles");

@@ -2,7 +2,7 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore, getFirestore, persistentLocalCache } from "firebase/firestore";
 
-// Verificar si Firebase está configurado
+// Producción: Firebase es obligatorio. Sin modo demo.
 const isFirebaseConfigured = () => {
   return !!(
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
@@ -21,29 +21,23 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase solo si está configurado
-let app: any = null;
-let auth: any = null;
-let db: any = null;
+if (!isFirebaseConfigured()) {
+  throw new Error(
+    "Firebase no configurado. Configure NEXT_PUBLIC_FIREBASE_* en .env.local"
+  );
+}
 
-if (isFirebaseConfigured()) {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-  auth = getAuth(app);
-  try {
-    // Usar initializeFirestore con persistentLocalCache (reemplaza enableIndexedDbPersistence deprecado)
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache(),
-    });
-  } catch {
-    // Ya inicializado (ej. HMR) - usar instancia existente
-    db = getFirestore(app);
-  }
-} else {
-  // Modo demo - crear objetos mock (sin log para no ensuciar consola)
-  auth = null;
-  db = null;
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
+let db: ReturnType<typeof getFirestore>;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache(),
+  });
+} catch {
+  db = getFirestore(app);
 }
 
 export { auth, db };
-export const useFirebase = isFirebaseConfigured();
+export const useFirebase = true;
 export default app;

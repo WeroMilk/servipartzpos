@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, Store, DollarSign, TrendingUp } from "lucide-react";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { useFirebase } from "@/lib/firebase";
 import { getStores, getAllStoresSales } from "@/lib/firestore";
 import { getSalesStats } from "@/lib/salesReport";
@@ -24,7 +24,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!demoAuth.isAdminUser()) {
+    if (!auth.isAdminUser()) {
       router.replace("/inventario");
       return;
     }
@@ -55,7 +55,7 @@ export default function AdminPage() {
         .finally(() => setLoading(false));
     } else {
       const stats = getSalesStats();
-      const storeName = demoAuth.getCurrentUser()?.storeName ?? "Matriz";
+      const storeName = auth.getCurrentUser()?.storeName ?? "Matriz";
       setSummaries([
         {
           storeId: "default",

@@ -15,7 +15,7 @@ import { addSaleRecord, getProductSalesCounts } from "@/lib/salesRegistry";
 import { getCurrentShift } from "@/lib/shiftService";
 import { processQueue } from "@/lib/syncQueue";
 import { setLastSaleImport } from "@/lib/lastSaleImport";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { employeeAuth } from "@/lib/employeeAuth";
 import { getNextTicketNumber } from "@/lib/ticketCounter";
 import { getProductImageUrl } from "@/lib/productImages";
@@ -256,7 +256,7 @@ export default function CajaPage() {
             type: "sale",
             oldValue: current,
             newValue: next,
-            userName: demoAuth.getCurrentUser()?.name ?? "Caja",
+            userName: auth.getCurrentUser()?.name ?? "Caja",
           });
         }
 
@@ -272,7 +272,7 @@ export default function CajaPage() {
           paymentMethod: payments.length ? undefined : payment.method,
           amountReceived: payment.amountReceived,
           change: payment.change,
-          employeeName: demoAuth.getCurrentUser()?.name,
+          employeeName: auth.getCurrentUser()?.name,
           type: "sale",
         });
       } else {
@@ -310,7 +310,7 @@ export default function CajaPage() {
             bottleId: "_",
             bottleName: a.bottleName,
             newValue: a.deducted,
-            userName: demoAuth.getCurrentUser()?.name ?? "Caja",
+            userName: auth.getCurrentUser()?.name ?? "Caja",
             description: `Venta: ${a.bottleName} -${a.deducted} ${a.unit}`,
           });
         });
@@ -330,7 +330,7 @@ export default function CajaPage() {
           paymentMethod: payments.length ? undefined : payment.method,
           amountReceived: payment.amountReceived,
           change: payment.change,
-          employeeName: demoAuth.getCurrentUser()?.name,
+          employeeName: auth.getCurrentUser()?.name,
           type: "sale",
         });
       }
@@ -339,7 +339,7 @@ export default function CajaPage() {
         items: saleItems,
         total,
         ticketNumber,
-        employeeName: demoAuth.getCurrentUser()?.name,
+        employeeName: auth.getCurrentUser()?.name,
         paymentMethod,
         payments: payments.length ? payments : undefined,
         amountReceived: payment.amountReceived,

@@ -7,7 +7,7 @@ import { categories } from "@/lib/bottlesData";
 import { getLastInventoryComplete, setLastInventoryComplete, LAST_INVENTORY_COMPLETE_EVENT } from "@/lib/lastInventoryComplete";
 import { Bottle } from "@/lib/types";
 import { movementsService, notificationsService } from "@/lib/movements";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { storeStore } from "@/lib/storeStore";
@@ -136,7 +136,7 @@ export default function InventarioPage() {
       bottleId: "_",
       bottleName: "Inventario",
       newValue: total,
-      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      userName: auth.getCurrentUser()?.name ?? "Usuario",
       description: descriptionText,
     });
     notificationsService.incrementUnread();
@@ -174,7 +174,7 @@ export default function InventarioPage() {
       bottleId: "_",
       bottleName: "Inventario",
       newValue: 0,
-      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      userName: auth.getCurrentUser()?.name ?? "Usuario",
       description: `Orden de lista: ${getSortLabel(newSort)}`,
     });
   };
@@ -206,7 +206,7 @@ export default function InventarioPage() {
         bottleId: "_",
         bottleName: "Inventario",
         newValue: 0,
-        userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+        userName: auth.getCurrentUser()?.name ?? "Usuario",
         description: "Orden de productos actualizado",
       });
     }
@@ -233,7 +233,7 @@ export default function InventarioPage() {
         type: "edit",
         oldValue: 0,
         newValue: newStock,
-        userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+        userName: auth.getCurrentUser()?.name ?? "Usuario",
       }).catch(() => {
         /* ignore */
       });

@@ -53,21 +53,14 @@ export const employeeAuth = {
   },
 
   /**
-   * Empleados visibles según el usuario logueado. Vendedores (Gabriel) solo ven vendedores; gerente (Zavala) ve todos.
+   * Empleados visibles según el usuario logueado. Vendedores solo ven vendedores; gerente ve todos.
+   * Pasa el perfil actual (auth.getCurrentUser()) para filtrar por rol.
    */
-  getEmployeesForCurrentUser: (): Employee[] => {
+  getEmployeesForCurrentUser: (currentUser?: { role?: string } | null): Employee[] => {
     const all = employeeAuth.getEmployees();
     if (typeof window === "undefined") return all;
-    try {
-      const raw = localStorage.getItem("demo_user") || localStorage.getItem("servipartz-firebase-user");
-      if (!raw) return all;
-      const user = JSON.parse(raw) as { email?: string };
-      const email = (user?.email || "").toLowerCase();
-      if (email === "gabriel@servipartz.com") {
-        return all.filter((e) => e.role === "vendedor");
-      }
-    } catch {
-      /* ignore */
+    if (currentUser?.role === "store_user") {
+      return all.filter((e) => e.role === "vendedor");
     }
     return all;
   },

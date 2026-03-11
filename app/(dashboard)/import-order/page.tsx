@@ -8,7 +8,7 @@ import { buildSalesOrderExcelTemplate, downloadSalesOrderTemplate } from "@/lib/
 import { setLastInventoryUpdate } from "@/lib/inventoryUpdate";
 import { setLastInventoryComplete } from "@/lib/lastInventoryComplete";
 import { movementsService, notificationsService } from "@/lib/movements";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { useToast } from "@/components/Toast/ToastContext";
 
 export default function ImportOrderPage() {
@@ -122,7 +122,7 @@ export default function ImportOrderPage() {
         bottleId: "_",
         bottleName: "Importar pedido",
         newValue: result.applied.length,
-        userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+        userName: auth.getCurrentUser()?.name ?? "Usuario",
         description: `${result.applied.length} líneas sumadas al inventario`,
       });
       notificationsService.incrementUnread();

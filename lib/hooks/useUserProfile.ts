@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db, useFirebase } from "@/lib/firebase";
+import { auth as firebaseAuth, db, useFirebase } from "@/lib/firebase";
 import type { UserProfile } from "@/lib/firestore";
 import { storeStore } from "@/lib/storeStore";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 
 interface UseUserProfileResult {
   profile: UserProfile | null;
@@ -23,12 +23,12 @@ export function useUserProfile(): UseUserProfileResult {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!useFirebase || !auth?.currentUser || !db) {
+    if (!firebaseAuth?.currentUser || !db) {
       setLoading(false);
       return;
     }
 
-    const uid = auth.currentUser.uid;
+    const uid = firebaseAuth.currentUser.uid;
     const ref = doc(db, "users", uid);
 
     const unsub = onSnapshot(
@@ -47,12 +47,13 @@ export function useUserProfile(): UseUserProfileResult {
           storeIds: data.storeIds || [],
           currentStoreId: data.currentStoreId,
           currentStoreName: data.currentStoreName,
+          storeName: data.storeName,
         };
         setProfile(p);
         setLoading(false);
 
-        // Actualizar demoAuth y tienda actual (sincronizada entre dispositivos)
-        demoAuth.setFirebaseProfile(p);
+        // Actualizar perfil en memoria y tienda actual (sincronizada entre dispositivos)
+        auth.setProfile(p);
         if (p.currentStoreId) {
           storeStore.setStore(p.currentStoreId, p.currentStoreName);
         }

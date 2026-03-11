@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Store, LayoutDashboard } from "lucide-react";
-import { demoAuth } from "@/lib/demoAuth";
-import { useFirebase } from "@/lib/firebase";
-import { getStores, setUserProfile } from "@/lib/firestore";
+import { auth } from "@/lib/auth";
+import { getStores, setUserProfile, createStore } from "@/lib/firestore";
 import { storeStore } from "@/lib/storeStore";
 import type { Store as StoreType } from "@/lib/types";
-import { auth } from "@/lib/firebase";
+import { auth as firebaseAuth } from "@/lib/firebase";
 
 export default function SelectStorePage() {
   const router = useRouter();
@@ -16,54 +15,65 @@ export default function SelectStorePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = demoAuth.getCurrentUser();
-    const storeIds = user?.storeIds ?? ["default"];
+    const user = auth.getCurrentUser();
+    const storeIds = user?.storeIds ?? [];
+    const onlyDefault = storeIds.length === 0 || (storeIds.length === 1 && storeIds[0] === "default");
 
-    if (storeIds.length === 1 && storeIds[0] === "default") {
-      storeStore.setStore("default", user?.storeName || "Matriz");
-      router.replace("/caja");
-      return;
-    }
+    getStores()
+      .then(async (all) => {
+        const filtered =
+          auth.isAdminUser()
+            ? all
+            : all.filter((s) => storeIds.includes(s.id));
 
-    if (useFirebase) {
-      getStores()
-        .then((all) => {
-          const filtered =
-            demoAuth.isAdminUser()
-              ? all
-              : all.filter((s) => storeIds.includes(s.id));
-          setStores(filtered);
-          if (filtered.length === 1) {
-            storeStore.setStore(filtered[0].id, filtered[0].name);
-            router.replace("/caja");
+        // Usuario solo con "default": usar primera tienda Firestore (gerente) o crear "Matriz" para sincronizar
+        if (onlyDefault && auth.isAdminUser()) {
+          let store: StoreType;
+          if (all.length > 0) {
+            store = all[0];
+          } else {
+            store = await createStore("Matriz");
           }
-        })
-        .catch(() => setStores([]))
-        .finally(() => setLoading(false));
-    } else {
-      setStores(
-        storeIds.map((id) => ({
-          id,
-          name: id === "default" ? (user?.storeName || "Matriz") : id,
-          createdAt: new Date(),
-        }))
-      );
-      setLoading(false);
-    }
+          storeStore.setStore(store.id, store.name);
+          if (firebaseAuth?.currentUser) {
+            await setUserProfile(firebaseAuth.currentUser.uid, {
+              currentStoreId: store.id,
+              currentStoreName: store.name,
+              storeIds: [store.id],
+            });
+          }
+          router.replace("/caja");
+          return;
+        }
+
+        setStores(filtered);
+        if (filtered.length === 1) {
+          storeStore.setStore(filtered[0].id, filtered[0].name);
+          if (firebaseAuth?.currentUser) {
+            setUserProfile(firebaseAuth.currentUser.uid, {
+              currentStoreId: filtered[0].id,
+              currentStoreName: filtered[0].name,
+            }).catch(() => {});
+          }
+          router.replace("/caja");
+        }
+      })
+      .catch(() => setStores([]))
+      .finally(() => setLoading(false));
   }, [router]);
 
   const handleSelect = (store: StoreType) => {
     storeStore.setStore(store.id, store.name);
     // Guardar tienda actual en el perfil para sincronizar entre dispositivos
-    if (useFirebase && auth?.currentUser) {
-      setUserProfile(auth.currentUser.uid, {
+    if (firebaseAuth?.currentUser) {
+      setUserProfile(firebaseAuth.currentUser.uid, {
         currentStoreId: store.id,
         currentStoreName: store.name,
       }).catch(() => {
         /* ignore */
       });
     }
-    router.push(demoAuth.isLimitedUser() ? "/caja" : "/inventario");
+    router.push(auth.isLimitedUser() ? "/caja" : "/inventario");
   };
 
   if (loading) {

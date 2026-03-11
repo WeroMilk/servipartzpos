@@ -14,7 +14,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import Link from "next/link";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { useFirebase } from "@/lib/firebase";
 import {
   getStores,
@@ -40,7 +40,7 @@ export default function AdminStoresPage() {
   const [viewStats, setViewStats] = useState<{ sales: number; products: number } | null>(null);
 
   useEffect(() => {
-    if (!demoAuth.isAdminUser()) {
+    if (!auth.isAdminUser()) {
       router.replace("/inventario");
       return;
     }
@@ -148,7 +148,7 @@ export default function AdminStoresPage() {
     }
   };
 
-  if (!demoAuth.isAdminUser()) return null;
+  if (!auth.isAdminUser()) return null;
 
   if (!useFirebase) {
     return (

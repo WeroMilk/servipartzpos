@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
-import { auth, useFirebase } from "@/lib/firebase";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth as firebaseAuth } from "@/lib/firebase";
+import { auth } from "@/lib/auth";
 import { storeStore } from "@/lib/storeStore";
 import { LogOut } from "lucide-react";
 
@@ -19,12 +19,8 @@ export default function LogoutButton({ className = "", showText = true, alwaysSh
   const router = useRouter();
 
   const handleLogout = async () => {
-    if (useFirebase && auth) {
-      demoAuth.clearFirebaseProfile();
-      await signOut(auth);
-    } else {
-      demoAuth.signOut();
-    }
+    auth.clearProfile();
+    await signOut(firebaseAuth);
     storeStore.clearStore();
     router.push("/");
   };

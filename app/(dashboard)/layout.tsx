@@ -8,8 +8,8 @@ import DashboardFooter from "@/components/Dashboard/DashboardFooter";
 import { ToastProvider } from "@/components/Toast/ToastContext";
 import { notificationsService } from "@/lib/movements";
 import { storeStore } from "@/lib/storeStore";
-import { demoAuth } from "@/lib/demoAuth";
-import { localStores } from "@/lib/localStores";
+import { auth } from "@/lib/auth";
+import { getStore } from "@/lib/firestore";
 
 export default function DashboardLayout({
   children,
@@ -29,24 +29,24 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const skipStoreCheck = pathname === "/select-store" || pathname === "/stores" || pathname === "/report" || pathname === "/inventario" || pathname?.startsWith("/admin");
-    // Vendedor (Gabriel): auto-asignar su tienda asignada si no tiene, para evitar bucle con /stores restringido
-    if (demoAuth.isLimitedUser() && !storeStore.getStoreId()) {
-      const user = demoAuth.getCurrentUser();
-      const storeIds = user?.storeIds ?? ["default"];
-      const storeId = storeIds[0] ?? "default";
-      const stores = localStores.ensureDefault(user?.storeName ?? "Matriz");
-      const store = stores.find((s) => s.id === storeId);
-      const storeName = store?.name ?? (storeId === "default" ? user?.storeName ?? "Matriz" : storeId);
-      storeStore.setStore(storeId, storeName);
+    // Vendedor: auto-asignar su tienda asignada si no tiene
+    if (auth.isLimitedUser() && !storeStore.getStoreId()) {
+      const user = auth.getCurrentUser();
+      const storeIds = user?.storeIds ?? [];
+      const storeId = storeIds[0];
+      if (storeId) {
+        getStore(storeId).then((store) => {
+          if (store) storeStore.setStore(store.id, store.name);
+        });
+      }
     }
     if (!skipStoreCheck && !storeStore.getStoreId()) {
       router.replace("/stores");
     }
   }, [pathname, router]);
 
-  // Usuario limitado (Gabriel): solo caja, turnos y devoluciones (con contraseña gerente). Sin inventario ni nada más.
+  // Usuario limitado (Gabriel): solo caja, inventario, turnos y devoluciones (devoluciones con contraseña gerente).
   const restrictedForLimited = [
-    "/inventario",
     "/report",
     "/movements",
     "/import-order",
@@ -57,7 +57,7 @@ export default function DashboardLayout({
     "/select-bottles",
   ];
   useEffect(() => {
-    if (demoAuth.isLimitedUser() && pathname && restrictedForLimited.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    if (auth.isLimitedUser() && pathname && restrictedForLimited.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
       router.replace("/caja");
     }
   }, [pathname, router]);

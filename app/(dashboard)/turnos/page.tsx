@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X, ClipboardCheck } from "lucide-react";
 import { storeStore } from "@/lib/storeStore";
 import { employeeAuth } from "@/lib/employeeAuth";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { movementsService, notificationsService } from "@/lib/movements";
 import {
   getCurrentShift,
@@ -65,8 +65,8 @@ export default function TurnosPage() {
     setPreCorteLoading(false);
   }, [showPreCorteModal, currentShift, isCloud, storeId]);
 
-  const employees = employeeAuth.getEmployeesForCurrentUser();
-  const defaultEmpId = demoAuth.isLimitedUser() ? "001" : employees[0]?.id;
+  const employees = employeeAuth.getEmployeesForCurrentUser(auth.getCurrentUser());
+  const defaultEmpId = auth.isLimitedUser() ? "001" : employees[0]?.id;
   const effectiveEmployeeId = selectedEmployeeId || defaultEmpId || "";
 
   const handleOpenShiftClick = () => {
@@ -98,7 +98,7 @@ export default function TurnosPage() {
           bottleId: "_",
           bottleName: "Caja",
           newValue: pendingAmount,
-          userName: demoAuth.getCurrentUser()?.name ?? employeeName,
+          userName: auth.getCurrentUser()?.name ?? employeeName,
           description: `Apertura de caja: ${employeeName} - Fondo inicial $${pendingAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
         });
         notificationsService.incrementUnread();

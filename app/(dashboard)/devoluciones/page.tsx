@@ -9,7 +9,7 @@ import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
 import { movementsService, notificationsService } from "@/lib/movements";
 import { addSaleRecord, getSaleByTicket } from "@/lib/salesRegistry";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import type { Bottle, SaleItem } from "@/lib/types";
 import { useFirebase } from "@/lib/firebase";
 import { addMovement as addMovementFirestore, addSaleRecordFirestore, getSaleByTicketFirestore, getStoreProducts, updateProductStock } from "@/lib/firestore";
@@ -29,7 +29,7 @@ const DEVO_AUTH_KEY = "gabriel-devoluciones-authorized";
 export default function DevolucionesPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
-  const isLimited = demoAuth.isLimitedUser();
+  const isLimited = auth.isLimitedUser();
   const [managerPassword, setManagerPassword] = useState("");
   const [managerPasswordError, setManagerPasswordError] = useState("");
   const [authorized, setAuthorized] = useState(() => {
@@ -69,7 +69,7 @@ export default function DevolucionesPage() {
   }, [isCloud, storeId]);
 
   const handleManagerAuth = () => {
-    if (demoAuth.verifyManagerPassword(managerPassword)) {
+    if (auth.verifyManagerPassword(managerPassword)) {
       sessionStorage.setItem(DEVO_AUTH_KEY, "1");
       setAuthorized(true);
       setManagerPassword("");
@@ -203,7 +203,7 @@ export default function DevolucionesPage() {
             type: "return",
             oldValue: current,
             newValue: next,
-            userName: demoAuth.getCurrentUser()?.name ?? "Sistema",
+            userName: auth.getCurrentUser()?.name ?? "Sistema",
           });
         } else {
           addStockToProduct(item.productId, item.quantity, useUnits);
@@ -212,7 +212,7 @@ export default function DevolucionesPage() {
             bottleId: item.productId,
             bottleName: item.name,
             newValue: item.quantity,
-            userName: demoAuth.getCurrentUser()?.name ?? "Sistema",
+            userName: auth.getCurrentUser()?.name ?? "Sistema",
             description: `Devolución: ${item.name} +${item.quantity} unid`,
           });
         }
@@ -225,7 +225,7 @@ export default function DevolucionesPage() {
           storeId: sid,
           items: saleItems.map((s) => ({ ...s, quantity: -s.quantity })),
           total: -totalAmount,
-          employeeName: demoAuth.getCurrentUser()?.name,
+          employeeName: auth.getCurrentUser()?.name,
           type: "return",
         });
       } else {
@@ -234,7 +234,7 @@ export default function DevolucionesPage() {
           storeId: sid,
           items: saleItems.map((s) => ({ ...s, quantity: -s.quantity })),
           total: -totalAmount,
-          employeeName: demoAuth.getCurrentUser()?.name,
+          employeeName: auth.getCurrentUser()?.name,
           type: "return",
         });
       }

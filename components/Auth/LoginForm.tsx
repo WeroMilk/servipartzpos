@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, useFirebase } from "@/lib/firebase";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth as firebaseAuth } from "@/lib/firebase";
+import { auth } from "@/lib/auth";
+import { getUserProfile, setUserProfile } from "@/lib/firestore";
 import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
@@ -22,34 +23,37 @@ export default function LoginForm() {
     const fullEmail = email.includes("@") ? email.trim() : `${email.trim()}@servipartz.com`;
 
     try {
-      if (useFirebase && auth) {
-        try {
-          // Usar Firebase real
-          if (isLogin) {
-            await signInWithEmailAndPassword(auth, fullEmail, password);
-          } else {
-            await createUserWithEmailAndPassword(auth, fullEmail, password);
-          }
-          await auth.authStateReady();
-        } catch (firebaseErr: any) {
-          // Si Firebase Auth no está configurado (auth/configuration-not-found), usar demo
-          if (firebaseErr?.code === "auth/configuration-not-found") {
-            await demoAuth.signIn(fullEmail, password);
-          } else {
-            throw firebaseErr;
-          }
-        }
+      if (isLogin) {
+        await signInWithEmailAndPassword(firebaseAuth, fullEmail, password);
       } else {
-        // Usar modo demo
-        if (isLogin) {
-          await demoAuth.signIn(fullEmail, password);
-        } else {
-          await demoAuth.signUp(fullEmail, password);
-        }
+        await createUserWithEmailAndPassword(firebaseAuth, fullEmail, password);
       }
-      router.push(demoAuth.isLimitedUser() ? "/select-store" : "/stores");
-    } catch (err: any) {
-      const code = err?.code ?? "";
+      await firebaseAuth.authStateReady();
+      const user = firebaseAuth.currentUser;
+      if (!user) {
+        setError("Error al obtener el usuario");
+        return;
+      }
+
+      let profile = await getUserProfile(user.uid);
+      if (!profile) {
+        await setUserProfile(user.uid, {
+          email: user.email ?? fullEmail,
+          name: user.displayName ?? user.email?.split("@")[0] ?? fullEmail.split("@")[0],
+          role: "store_user",
+          storeIds: [],
+        });
+        profile = {
+          email: user.email ?? fullEmail,
+          name: user.displayName ?? user.email?.split("@")[0],
+          role: "store_user",
+          storeIds: [],
+        };
+      }
+      auth.setProfile(profile);
+      router.push(profile.role === "admin" ? "/stores" : "/select-store");
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? "";
       const messages: Record<string, string> = {
         "auth/invalid-credential": "Contraseña incorrecta",
         "auth/invalid-email": "Correo electrónico no válido",
@@ -59,7 +63,7 @@ export default function LoginForm() {
         "auth/network-request-failed": "Error de conexión. Revisa tu internet",
         "auth/user-disabled": "Esta cuenta ha sido deshabilitada",
       };
-      setError(messages[code] || err?.message || "Error al autenticar");
+      setError(messages[code] || (err instanceof Error ? err.message : "Error al autenticar"));
     } finally {
       setLoading(false);
     }
@@ -70,7 +74,6 @@ export default function LoginForm() {
       className="relative min-h-[100dvh] min-h-screen flex items-center justify-center px-8 py-4 sm:px-6 sm:py-4 bg-apple-bg safe-area-x overflow-hidden"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      {/* Reflejos azules detrás del box */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <div className="login-orb-1 absolute w-[min(80vw,320px)] h-[min(80vw,320px)] rounded-full bg-primary-600 opacity-[0.28] blur-[80px] -left-[10%] top-[5%]" />
         <div className="login-orb-2 absolute w-[min(60vw,260px)] h-[min(60vw,260px)] rounded-full bg-primary-700 opacity-[0.32] blur-[70px] right-[0%] top-[30%]" />
@@ -102,7 +105,7 @@ export default function LoginForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="flex-1 min-w-0 bg-transparent text-apple-text placeholder-apple-text2 focus:outline-none"
-                  placeholder="gabriel"
+                  placeholder="usuario"
                 />
                 <span className="text-apple-text2 text-sm shrink-0">@servipartz.com</span>
               </div>
@@ -141,7 +144,6 @@ export default function LoginForm() {
             </button>
           </form>
 
-          {/* No mostrar nunca credenciales de prueba ni usuarios demo en la UI */}
           <footer className="mt-6 pt-4 border-t border-apple-border">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-apple-text2">
               <a href="/legal/privacidad" className="hover:text-apple-accent transition-colors">

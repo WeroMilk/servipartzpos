@@ -5,8 +5,9 @@ import Link from "next/link";
 import { employeeAuth } from "@/lib/employeeAuth";
 import type { Employee } from "@/lib/employeeAuth";
 import { movementsService, notificationsService } from "@/lib/movements";
-import { demoAuth } from "@/lib/demoAuth";
-import { localStores } from "@/lib/localStores";
+import { auth } from "@/lib/auth";
+import { getStores } from "@/lib/firestore";
+import type { Store as StoreType } from "@/lib/types";
 import { loadInventory } from "@/lib/inventoryStorage";
 import { buildOrderReport } from "@/lib/orderReport";
 import { exportInventory, exportSales, exportMovements, exportAll } from "@/lib/exportService";
@@ -34,22 +35,25 @@ export default function ConfigPage() {
     setEmployees(employeeAuth.getEmployees());
   }, []);
 
-  const registeredUsers = demoAuth.getRegisteredUsersForAdmin();
-  const allStores = localStores.getAll().length > 0
-    ? localStores.getAll()
-    : localStores.ensureDefault(demoAuth.getCurrentUser()?.storeName ?? "Matriz");
-
-  useEffect(() => {
-    const init: Record<string, string[]> = {};
-    demoAuth.getRegisteredUsersForAdmin().forEach((u) => {
-      init[u.email] = u.storeIds ?? ["default"];
-    });
-    setUserStoreAssignments(init);
-  }, []);
+  const [registeredUsers, setRegisteredUsers] = useState<{ email: string; name?: string; role: string; storeIds?: string[] }[]>([]);
+  const [allStores, setAllStores] = useState<StoreType[]>([]);
   const [orderReportText, setOrderReportText] = useState("");
   const [orderRecipient, setOrderRecipient] = useState(WHATSAPP_RECIPIENTS[0]?.value ?? "");
   const [exporting, setExporting] = useState<string | null>(null);
   const [userStoreAssignments, setUserStoreAssignments] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (!auth.isAdminUser()) return;
+    auth.getRegisteredUsersForAdmin().then((list) => {
+      setRegisteredUsers(list);
+      const init: Record<string, string[]> = {};
+      list.forEach((u) => {
+        init[u.email] = u.storeIds ?? [];
+      });
+      setUserStoreAssignments(init);
+    });
+    getStores().then(setAllStores);
+  }, []);
 
   const handleGenerateOrder = () => {
     const bottles = loadInventory();
@@ -123,7 +127,7 @@ export default function ConfigPage() {
       bottleId: "_",
       bottleName: "Configuración",
       newValue: 0,
-      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      userName: auth.getCurrentUser()?.name ?? "Usuario",
       description: `Contraseña de «${emp.label}» actualizada`,
     });
     notificationsService.incrementUnread();
@@ -132,27 +136,26 @@ export default function ConfigPage() {
 
   const handleStoreAssignmentChange = (email: string, storeId: string, checked: boolean) => {
     setUserStoreAssignments((prev) => {
-      const current = prev[email] ?? ["default"];
+      const current = prev[email] ?? [];
       let next: string[];
       if (checked) {
         next = current.includes(storeId) ? current : [...current, storeId];
       } else {
         next = current.filter((id) => id !== storeId);
       }
-      if (next.length === 0) next = ["default"];
       return { ...prev, [email]: next };
     });
   };
 
-  const handleSaveStoreAssignment = (email: string) => {
-    const storeIds = userStoreAssignments[email] ?? ["default"];
-    demoAuth.updateUserStoreIds(email, storeIds);
+  const handleSaveStoreAssignment = async (email: string) => {
+    const storeIds = userStoreAssignments[email] ?? [];
+    await auth.updateUserStoreIds(email, storeIds);
     movementsService.add({
       type: "store_name_change",
       bottleId: "_",
       bottleName: "Configuración",
       newValue: 0,
-      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      userName: auth.getCurrentUser()?.name ?? "Usuario",
       description: `Tiendas asignadas a ${email} actualizadas`,
     });
   };
@@ -255,7 +258,7 @@ export default function ConfigPage() {
           </section>
 
           {/* Asignación de tiendas por vendedor - solo admin */}
-          {demoAuth.isAdminUser() && registeredUsers.length > 0 && (
+          {auth.isAdminUser() && registeredUsers.length > 0 && (
             <section className="flex flex-col min-h-0 min-w-0 bg-apple-surface rounded-xl sm:rounded-2xl border border-apple-border shadow-sm overflow-hidden">
               <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-apple-border/60 flex items-center gap-2">
                 <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-apple-accent/10 shrink-0">
@@ -284,7 +287,7 @@ export default function ConfigPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {allStores.map((store) => {
-                        const assigned = (userStoreAssignments[user.email] ?? user.storeIds ?? ["default"]).includes(store.id);
+                        const assigned = (userStoreAssignments[user.email] ?? user.storeIds ?? []).includes(store.id);
                         return (
                           <label
                             key={store.id}

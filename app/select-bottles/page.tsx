@@ -6,7 +6,7 @@ import AuthGuard from "@/components/Auth/AuthGuard";
 import { categories, defaultBottles } from "@/lib/bottlesData";
 import { saveInventory } from "@/lib/inventoryStorage";
 import { movementsService, notificationsService } from "@/lib/movements";
-import { demoAuth } from "@/lib/demoAuth";
+import { auth } from "@/lib/auth";
 import { Bottle } from "@/lib/types";
 import { Check, ChevronRight, ChevronLeft } from "lucide-react";
 import LogoutButton from "@/components/Auth/LogoutButton";
@@ -94,7 +94,7 @@ export default function SelectBottlesPage() {
       bottleId: "_",
       bottleName: "Inventario",
       newValue: barBottles.length,
-      userName: demoAuth.getCurrentUser()?.name ?? "Usuario",
+      userName: auth.getCurrentUser()?.name ?? "Usuario",
       description: `Inventario actualizado: ${barBottles.length} productos`,
     });
     notificationsService.incrementUnread();
