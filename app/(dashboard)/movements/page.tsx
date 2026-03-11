@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { Check, X, Edit, Settings, ChevronLeft, ChevronRight, Package, Type, Calendar, FileSpreadsheet, ArrowLeftRight, ClipboardCheck, Lock, RotateCcw, DollarSign } from "lucide-react";
 import { isBeerBottleId } from "@/lib/measurementRules";
 import { useFirebase } from "@/lib/firebase";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { useMovements } from "@/lib/hooks/useMovements";
 
 /** Items por página: en móvil sin scroll (reducir boxes para que todo quepa).
@@ -26,7 +26,7 @@ function getItemsPerPage(width: number, height: number = 800) {
 }
 
 export default function MovementsPage() {
-  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const { storeId } = useStore();
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
   const [movements, setMovements] = useState<Movement[]>([]);
   const [currentPage, setCurrentPage] = useState(1);

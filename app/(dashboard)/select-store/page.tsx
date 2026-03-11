@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { Store, LayoutDashboard } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getStores, setUserProfile, createStore } from "@/lib/firestore";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import type { Store as StoreType } from "@/lib/types";
 import { auth as firebaseAuth } from "@/lib/firebase";
 
 export default function SelectStorePage() {
   const router = useRouter();
+  const { setStore } = useStore();
   const [stores, setStores] = useState<StoreType[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,10 +22,8 @@ export default function SelectStorePage() {
 
     getStores()
       .then(async (all) => {
-        const filtered =
-          auth.isAdminUser()
-            ? all
-            : all.filter((s) => storeIds.includes(s.id));
+        // Todos ven las mismas tiendas (gerente y vendedores)
+        const filtered = all;
 
         // Usuario solo con "default": usar primera tienda Firestore (gerente) o crear "Matriz" para sincronizar
         if (onlyDefault && auth.isAdminUser()) {
@@ -34,7 +33,7 @@ export default function SelectStorePage() {
           } else {
             store = await createStore("Matriz");
           }
-          storeStore.setStore(store.id, store.name);
+          setStore(store.id, store.name);
           if (firebaseAuth?.currentUser) {
             await setUserProfile(firebaseAuth.currentUser.uid, {
               currentStoreId: store.id,
@@ -48,7 +47,7 @@ export default function SelectStorePage() {
 
         setStores(filtered);
         if (filtered.length === 1) {
-          storeStore.setStore(filtered[0].id, filtered[0].name);
+          setStore(filtered[0].id, filtered[0].name);
           if (firebaseAuth?.currentUser) {
             setUserProfile(firebaseAuth.currentUser.uid, {
               currentStoreId: filtered[0].id,
@@ -60,18 +59,15 @@ export default function SelectStorePage() {
       })
       .catch(() => setStores([]))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, setStore]);
 
   const handleSelect = (store: StoreType) => {
-    storeStore.setStore(store.id, store.name);
-    // Guardar tienda actual en el perfil para sincronizar entre dispositivos
+    setStore(store.id, store.name);
     if (firebaseAuth?.currentUser) {
       setUserProfile(firebaseAuth.currentUser.uid, {
         currentStoreId: store.id,
         currentStoreName: store.name,
-      }).catch(() => {
-        /* ignore */
-      });
+      }).catch(() => {});
     }
     router.push(auth.isLimitedUser() ? "/caja" : "/inventario");
   };

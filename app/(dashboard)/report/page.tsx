@@ -15,7 +15,7 @@ import {
   type ReportPeriod,
 } from "@/lib/salesReport";
 import { auth } from "@/lib/auth";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { getCurrentShift } from "@/lib/shiftService";
 import { CalendarPicker } from "@/components/Report/CalendarPicker";
 import { useFirebase } from "@/lib/firebase";
@@ -46,7 +46,7 @@ function formatPeriodLabelShort(period: ReportPeriod, refDate: Date): string {
 
 export default function ReportPage() {
   const isLimited = auth.isLimitedUser();
-  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const { storeId } = useStore();
   const currentShift = storeId ? getCurrentShift(storeId) : null;
   const shiftStats = currentShift ? getSalesStatsForShift(currentShift.id) : null;
   const isCloud = !!storeId && storeId !== "default" && useFirebase;

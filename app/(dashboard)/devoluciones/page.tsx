@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { RotateCcw, Search, Plus, Minus, Loader2, Lock, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { loadInventory, saveInventory, addStockToProduct } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
@@ -27,7 +27,7 @@ type Mode = "ticket" | "manual";
 const DEVO_AUTH_KEY = "gabriel-devoluciones-authorized";
 
 export default function DevolucionesPage() {
-  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const { storeId } = useStore();
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
   const isLimited = auth.isLimitedUser();
   const [managerPassword, setManagerPassword] = useState("");

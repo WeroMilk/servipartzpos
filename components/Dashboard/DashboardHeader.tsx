@@ -7,7 +7,7 @@ import { Package, Bell, Settings, DollarSign, PackageOpen, Menu, X, ShoppingCart
 import { motion, AnimatePresence } from "framer-motion";
 import LogoutButton from "@/components/Auth/LogoutButton";
 import { auth } from "@/lib/auth";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 
 interface DashboardHeaderProps {
   leftContent?: React.ReactNode;
@@ -34,6 +34,7 @@ const STORES_NAV = { href: "/stores", icon: Store, label: "Gestión de tiendas" 
 
 export default function DashboardHeader({ leftContent, notificationsCount = 0 }: DashboardHeaderProps) {
   const pathname = usePathname();
+  const { storeId, storeName } = useStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
 
@@ -59,9 +60,9 @@ export default function DashboardHeader({ leftContent, notificationsCount = 0 }:
           <div className="flex-1 flex items-center min-w-0">
             <Link href="/caja" title="Ir a Punto de venta" className="flex items-center gap-2 shrink-0">
               <span className="text-base sm:text-lg font-bold text-white tracking-tight">SERVIPARTZ</span>
-              {storeStore.getStoreId() && pathname !== "/stores" && (
+              {storeId && pathname !== "/stores" && (
                 <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[120px]">
-                  {storeStore.getStoreName() || "Matriz"}
+                  {storeName || "Matriz"}
                 </span>
               )}
             </Link>

@@ -10,7 +10,7 @@ import { movementsService, notificationsService } from "@/lib/movements";
 import { auth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { updateProductStock, addMovement as addMovementFirestore } from "@/lib/firestore";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
 import { useInventory } from "@/lib/hooks/useInventory";
@@ -18,7 +18,7 @@ import { useInventory } from "@/lib/hooks/useInventory";
 type SortOption = "name-asc" | "quantity-desc" | "quantity-asc" | "custom";
 
 export default function InventarioPage() {
-  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const { storeId } = useStore();
   const { bottles, loading } = useInventory(storeId);
 
   const [activeIndex, setActiveIndex] = useState(0);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, DollarSign, Loader2, ChevronLeft, ChevronRight, X, ClipboardCheck } from "lucide-react";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { employeeAuth } from "@/lib/employeeAuth";
 import { auth } from "@/lib/auth";
 import { movementsService, notificationsService } from "@/lib/movements";
@@ -20,7 +20,7 @@ import { useTurns } from "@/lib/hooks/useTurns";
 import { openShiftFirestore, getCurrentShiftFirestore, getShiftsForStoreFirestore, type ShiftRecord } from "@/lib/firestore";
 
 export default function TurnosPage() {
-  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const { storeId } = useStore();
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
   
   // Hook para escuchar turnos en tiempo real

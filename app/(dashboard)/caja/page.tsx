@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Package, Percent, DollarSign, Clock, AlertCircle, Lock } from "lucide-react";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { loadInventory as loadInventoryFromStorage, saveInventory } from "@/lib/inventoryStorage";
 import { DEFAULT_PRODUCTS } from "@/lib/productsData";
 import { isMeasuredInUnits } from "@/lib/measurementRules";
@@ -37,7 +37,7 @@ interface CartItem {
 }
 
 export default function CajaPage() {
-  const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
+  const { storeId } = useStore();
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
   // Hook para inventario en tiempo real (siempre se llama)

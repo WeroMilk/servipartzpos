@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,7 +17,8 @@ import {
   DollarSign,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
+import { useUserProfile } from "@/lib/hooks/useUserProfile";
 import {
   getStores,
   createStore,
@@ -29,6 +30,8 @@ import type { Store as StoreType } from "@/lib/types";
 
 export default function StoresPage() {
   const router = useRouter();
+  const { setStore } = useStore();
+  const { profile, loading: profileLoading } = useUserProfile();
   const [stores, setStores] = useState<StoreType[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -36,27 +39,27 @@ export default function StoresPage() {
   const [editingStore, setEditingStore] = useState<StoreType | null>(null);
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
-  const isAdmin = auth.isAdminUser();
-  // Todos los usuarios pueden crear, editar y eliminar tiendas
+  const isAdmin = profile?.role === "admin";
   const canManageStores = true;
 
-  useEffect(() => {
-    loadStores();
-  }, []);
-
-  const loadStores = async () => {
+  const loadStores = useCallback(async () => {
+    if (!profile) return;
+    setLoading(true);
     try {
       const result = await getStores();
-      const user = auth.getCurrentUser();
-      const storeIds = user?.storeIds ?? [];
-      const filtered = isAdmin ? result : result.filter((s) => storeIds.includes(s.id));
-      setStores(filtered);
+      // Todos ven las mismas tiendas (gerente y vendedores)
+      setStores(result);
     } catch {
       setStores([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
+
+  useEffect(() => {
+    if (profileLoading || !profile) return;
+    loadStores();
+  }, [profileLoading, profile, loadStores]);
 
   const handleAdd = async () => {
     if (!formName.trim()) return;
@@ -120,7 +123,7 @@ export default function StoresPage() {
   };
 
   const handleEnterStore = (store: StoreType) => {
-    storeStore.setStore(store.id, store.name);
+    setStore(store.id, store.name);
     router.push("/caja");
   };
 
@@ -131,11 +134,11 @@ export default function StoresPage() {
     setModal("edit");
   };
 
-  if (loading) {
+  if (profileLoading || loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] p-6">
         <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
-        <p className="mt-4 text-slate-500">Cargando tiendas...</p>
+        <p className="mt-4 text-slate-500">{profileLoading ? "Cargando perfil…" : "Cargando tiendas…"}</p>
       </div>
     );
   }
