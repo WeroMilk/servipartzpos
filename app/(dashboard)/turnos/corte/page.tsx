@@ -11,7 +11,7 @@ import {
 } from "@/lib/cashCountService";
 import { getSalesByShift } from "@/lib/salesRegistry";
 import { getShiftById, closeShift } from "@/lib/shiftService";
-import { storeStore } from "@/lib/storeStore";
+import { useStore } from "@/lib/StoreContext";
 import { movementsService, notificationsService } from "@/lib/movements";
 import { auth } from "@/lib/auth";
 import { SERVIPARTZ_INFO } from "@/lib/storeInfo";
@@ -154,9 +154,12 @@ ${detailHtml}
 </html>`;
 }
 
-function printCorteReport(cut: CashCount, summary: ShiftSummary) {
-  const storeName = storeStore.getStoreName() ?? "Matriz";
-  const storeId = storeStore.getStoreId() ?? "default";
+function printCorteReport(
+  cut: CashCount,
+  summary: ShiftSummary,
+  storeId: string,
+  storeName: string
+) {
   const isCloud = storeId !== "default" && useFirebase;
   const run = async () => {
     const sales = isCloud ? await getSalesByShiftFirestore(storeId, cut.shiftId) : getSalesByShift(cut.shiftId);
@@ -180,6 +183,9 @@ function printCorteReport(cut: CashCount, summary: ShiftSummary) {
 function CorteContent() {
   const searchParams = useSearchParams();
   const shiftId = searchParams.get("shiftId");
+  const { storeId: ctxStoreId, storeName: ctxStoreName } = useStore();
+  const storeId = ctxStoreId ?? "default";
+  const storeName = ctxStoreName ?? "Matriz";
 
   const [actualCash, setActualCash] = useState("");
   const [loading, setLoading] = useState(false);
@@ -191,7 +197,6 @@ function CorteContent() {
 
   useEffect(() => {
     if (shiftId) {
-      const storeId = storeStore.getStoreId() ?? "default";
       const isCloud = storeId !== "default" && useFirebase;
       if (isCloud) {
         getShiftByIdFirestore(storeId, shiftId).then((shift) => {
@@ -210,11 +215,11 @@ function CorteContent() {
         setError("Turno no encontrado o ya cerrado");
         return;
       }
-      setSummary(calculateShiftSummary(shiftId));
+        setSummary(calculateShiftSummary(shiftId));
     } else {
       setError("Falta el ID del turno");
     }
-  }, [shiftId]);
+  }, [shiftId, storeId]);
 
   const handleConfirm = async () => {
     if (!shiftId || !summary) return;
@@ -226,7 +231,6 @@ function CorteContent() {
     setLoading(true);
     setError("");
     try {
-      const storeId = storeStore.getStoreId() ?? "default";
       const isCloud = storeId !== "default" && useFirebase;
       const shift = getShiftById(shiftId);
       const cut: CashCount = isCloud
@@ -242,6 +246,9 @@ function CorteContent() {
         : saveCashCount(shiftId, actual, summary);
       if (isCloud) {
         await closeShiftFirestore(storeId, shiftId);
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("turnos-just-closed", shiftId);
+        }
       } else {
         closeShift(shiftId);
         movementsService.add({
@@ -302,7 +309,7 @@ function CorteContent() {
           <div className="flex flex-col gap-3 w-full max-w-sm">
             <button
               type="button"
-              onClick={() => printCorteReport(savedCut, savedSummary)}
+              onClick={() => printCorteReport(savedCut, savedSummary, storeId, storeName)}
               className="w-full py-4 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 flex items-center justify-center gap-2"
             >
               <Printer className="w-5 h-5" />

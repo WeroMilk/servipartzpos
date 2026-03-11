@@ -41,8 +41,17 @@ export default function TurnosPage() {
 
   // Sincronizar con el hook de tiempo real o con datos locales.
   // En nube: no poner null si acabamos de abrir turno (optimista) hasta que llegue el dato.
+  // Si volvemos de corte recién cerrado, forzar null hasta que el listener actualice.
   useEffect(() => {
     if (isCloud) {
+      const justClosedId = typeof window !== "undefined" ? sessionStorage.getItem("turnos-just-closed") : null;
+      if (justClosedId && cloudCurrentShift?.id === justClosedId) {
+        sessionStorage.removeItem("turnos-just-closed");
+        lastOpenedShiftIdRef.current = null;
+        setCurrentShift(null);
+        setClosedShifts(cloudClosedShifts);
+        return;
+      }
       if (cloudCurrentShift) {
         lastOpenedShiftIdRef.current = null;
         setCurrentShift(cloudCurrentShift);
@@ -153,7 +162,12 @@ export default function TurnosPage() {
           <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
         )}
 
-        {currentShift ? (
+        {isCloud && turnsLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+            <Loader2 className="w-8 h-8 animate-spin mb-3" />
+            <p className="text-sm">Cargando turnos…</p>
+          </div>
+        ) : currentShift ? (
           <div className="space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
