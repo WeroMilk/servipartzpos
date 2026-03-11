@@ -80,7 +80,7 @@ export default function TurnosPage() {
   };
 
   const handleConfirmOpenShift = async () => {
-    if (pendingAmount == null) return;
+    if (pendingAmount == null || !storeId) return;
     const emp = employees.find((e) => e.id === effectiveEmployeeId);
     const employeeName = emp?.label ?? "Cajero";
     const employeeId = effectiveEmployeeId || "default";
@@ -90,9 +90,21 @@ export default function TurnosPage() {
     setError("");
     try {
       if (isCloud) {
-        await openShiftFirestore(storeId ?? "default", employeeId, employeeName, pendingAmount);
+        const newShiftId = await openShiftFirestore(storeId, employeeId, employeeName, pendingAmount);
+        // Actualización optimista: mostrar turno abierto de inmediato sin esperar el listener
+        const optimisticShift: Shift = {
+          id: newShiftId,
+          storeId,
+          employeeId,
+          employeeName,
+          openedAt: new Date(),
+          initialCash: pendingAmount,
+          status: "open",
+        };
+        setCurrentShift(optimisticShift);
       } else {
-        openShift(storeId ?? "default", employeeId, employeeName, pendingAmount);
+        const newShift = openShift(storeId, employeeId, employeeName, pendingAmount);
+        setCurrentShift(newShift);
         movementsService.add({
           type: "shift_open",
           bottleId: "_",
@@ -104,7 +116,6 @@ export default function TurnosPage() {
         notificationsService.incrementUnread();
       }
       setInitialCash("");
-      // El hook useTurns detectará el nuevo turno automáticamente
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al abrir turno");
     } finally {

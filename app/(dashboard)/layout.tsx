@@ -41,7 +41,7 @@ export default function DashboardLayout({
       }
     }
     if (!skipStoreCheck && !storeStore.getStoreId()) {
-      router.replace("/stores");
+      router.replace(auth.isLimitedUser() ? "/select-store" : "/stores");
     }
   }, [pathname, router]);
 

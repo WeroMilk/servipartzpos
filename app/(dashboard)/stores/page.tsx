@@ -63,14 +63,19 @@ export default function StoresPage() {
     setActionLoading(true);
     try {
       const store = await createStore(formName.trim(), formAddress.trim() || undefined);
-      await initStoreProducts(store.id);
       setStores((prev) => [...prev, store]);
       setModal(null);
       setFormName("");
       setFormAddress("");
+      try {
+        await initStoreProducts(store.id);
+      } catch (eInit) {
+        console.error("initStoreProducts:", eInit);
+        alert("Tienda creada, pero no se pudieron cargar los productos por defecto. Añádelos desde Inventario.");
+      }
     } catch (e) {
       console.error(e);
-      alert("Error al crear tienda");
+      alert(e instanceof Error ? e.message : "Error al crear tienda");
     } finally {
       setActionLoading(false);
     }

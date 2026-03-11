@@ -40,8 +40,8 @@ export default function CajaPage() {
   const storeId = typeof window !== "undefined" ? storeStore.getStoreId() : null;
   const isCloud = !!storeId && storeId !== "default" && useFirebase;
 
-  // Hook para inventario en tiempo real
-  const { bottles: cloudBottles, loading: inventoryLoading } = useInventory(isCloud ? storeId : null);
+  // Hook para inventario en tiempo real (siempre se llama)
+  const { bottles: cloudBottles, loading: inventoryLoading } = useInventory(isCloud && storeId ? storeId : null);
 
   const [bottles, setBottles] = useState<Bottle[]>([]);
   const [search, setSearch] = useState("");
@@ -110,6 +110,19 @@ export default function CajaPage() {
     window.addEventListener("online", syncPending);
     return () => window.removeEventListener("online", syncPending);
   }, [isCloud]);
+
+  // Sin tienda: pedir seleccionar (evita bug con vendedor o recargas)
+  if (!storeId) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <Package className="w-12 h-12 text-slate-300" />
+        <p className="text-slate-600 font-medium">Selecciona una tienda para usar el punto de venta</p>
+        <Link href="/select-store" className="px-4 py-2 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">
+          Ir a seleccionar tienda
+        </Link>
+      </div>
+    );
+  }
 
   const items = bottles.map((b) => {
     const useUnits = isMeasuredInUnits(b.category);
