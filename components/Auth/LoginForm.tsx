@@ -62,8 +62,14 @@ export default function LoginForm() {
         "auth/too-many-requests": "Demasiados intentos. Intenta más tarde",
         "auth/network-request-failed": "Error de conexión. Revisa tu internet",
         "auth/user-disabled": "Esta cuenta ha sido deshabilitada",
+        "permission-denied": "Sin permisos. Revisa las reglas de Firestore (colección users).",
       };
-      setError(messages[code] || (err instanceof Error ? err.message : "Error al autenticar"));
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.toLowerCase().includes("permission") || code === "permission-denied") {
+        setError(messages["permission-denied"] ?? msg);
+      } else {
+        setError(messages[code] || msg || "Error al autenticar");
+      }
     } finally {
       setLoading(false);
     }
